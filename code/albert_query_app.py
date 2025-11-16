@@ -13,6 +13,8 @@ from langchain_community.tools import DuckDuckGoSearchResults
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
+import chromadb
+from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
 import pathlib
 
@@ -38,6 +40,7 @@ st.markdown("""
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 OMDB_BASE_URL = "http://www.omdbapi.com/"
+CHROMA_PATH = r"../data/vector_database/"
 
 # Paths
 PROJECT_ROOT = pathlib.Path("C:/Users/Vincent/GitHub/Vincent-20-100/Agentic_Systems_Project_Vlamy")
@@ -58,9 +61,11 @@ class PlannerOutput(BaseModel):
     needs_sql: bool = Field(default=False, description="Whether SQL query is needed")
     needs_omdb: bool = Field(default=False, description="Whether OMDB enrichment is needed")
     needs_web: bool = Field(default=False, description="Whether web search is needed")
+    needs_semantic: bool = Field(default=False, description="Whether semantic search is needed")
     sql_query: Optional[str] = Field(None, description="Prepared SQL query if needed")
     omdb_query: Optional[str] = Field(None, description="Title to search in OMDB if needed")
     web_query: Optional[str] = Field(None, description="Web search query if needed")
+    semantic_query: Optional[str] = Field(None, description="Semantic search query if needed")
 
 class SQLOutput(BaseModel):
     """SQL execution decision"""
@@ -84,16 +89,19 @@ class AgentState(TypedDict):
     sql_query: str
     omdb_query: str
     web_query: str
+    semantic_query: str
     
     # Tool flags
     needs_sql: bool
     needs_omdb: bool
     needs_web: bool
+    needs_semantic: bool
     
     # Tool results
     sql_result: str
     omdb_result: str
     web_result: str
+    semantic_result: str 
     
     # Metadata
     sources_used: list
@@ -330,6 +338,74 @@ def omdb_api(by: str = "title", t: str = None, plot: str = "full") -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
+@tool
+def semantic_search(query: str, n_results: int = 5, table_filter: str = None) -> str:
+    """Execute semantic search on movie embeddings.
+
+      This tool searches movie descriptions using AI embeddings for semantic similarity.
+      ALL MOVIE DESCRIPTIONS ARE IN ENGLISH - query must be in English!
+
+      Two query strategies:
+      1. KEYWORD approach: Single word or short phrase (e.g., "romance", "space adventure", "heist")
+         → Good for finding movies by genre/theme
+
+      2. DESCRIPTIVE approach: Full sentence describing plot/content
+         (e.g., "A detective investigating a murder in a small town",
+               "Two friends on a road trip across America")
+         → Good for finding movies with similar plots/stories
+
+      Args:
+          query: English query - either keyword or descriptive sentence
+          n_results: Number of similar movies to return (default 5, max 10)
+          table_filter: Optional table name filter (e.g., "netflix_titles")
+
+      Returns:
+          JSON with similar movies: id, title, description, database, table, similarity_score"""
+    try:
+        # Get or create ChromaDB collection
+        os.makedirs(CHROMA_PATH, exist_ok=True)
+        client = chromadb.PersistentClient(path=CHROMA_PATH)
+
+        openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=OPENAI_API_KEY,
+            model_name="text-embedding-3-small"
+        )
+
+        collection = client.get_or_create_collection(
+            name="movie_descriptions",
+            embedding_function=openai_ef
+        )
+
+        # Build filter if specified
+        where_filter = None
+        if table_filter:
+            where_filter = {"table": table_filter}
+
+        # Query collection
+        results = collection.query(
+              query_texts=[query],
+              n_results=n_results,
+              where=where_filter
+          )
+
+          # Format results
+        formatted_results = []
+        if results['ids'] and len(results['ids'][0]) > 0:
+            for i in range(len(results['ids'][0])):
+                formatted_results.append({
+                    "id": results['ids'][0][i],
+                    "title": results['metadatas'][0][i].get('title', 'Unknown'),
+                    "description": results['documents'][0][i],
+                    "database": results['metadatas'][0][i].get('database', 'unknown'),
+                    "table": results['metadatas'][0][i].get('table', 'unknown'),
+                    "similarity_score": 1 - results['distances'][0][i] if 'distances' in results else None
+                })
+
+        return json.dumps(formatted_results, indent=2, default=str)
+
+    except Exception as e:
+        return json.dumps({"error": f"Semantic search error: {str(e)}"})
+
 # === WORKFLOW NODES ===
 
 def planner_node(state: AgentState) -> dict:
@@ -351,13 +427,21 @@ CONVERSATION HISTORY (last 5 messages):
 
 AVAILABLE TOOLS (priority order):
 1. SQL Database - Query movies/series data (titles, ratings, years, genres, cast)
-2. OMDB API - Detailed info (posters, full plot, actors, awards, ratings)
-3. Web Search - Recent news, trending topics, current events only
+    → Use for: filtering by year, rating, type, counting, aggregations
+2. Semantic Search - Find movies by description/themes/plot similarity (vector search)
+    → Use for: content-based search, "movies like X", plot descriptions, themes
+     IMPORTANT: Semantic query MUST be in English!
+    → Two approaches: By KEYWORD Like "romance" or by Full plot sentence like "A detective solving a mysterious murder"
+3. OMDB API - Detailed info (posters, full plot, actors, awards, ratings)
+    → Use for: enriching results with additional info
+4. Web Search - Recent news, trending topics, current events only
+    → Use for: "latest", "trending", "news", "today", "this week"
 
 INSTRUCTIONS:
 - Resolve references from history (e.g., "that movie" → actual movie name)
 - If question is about DATABASE SCHEMA/STRUCTURE/TABLES, set needs_sql=False (schema is already in catalog)
 - Always prefer SQL first if question is about movie/series data
+- Use Semantic Search for: plot descriptions, themes, "movies like X", content-based recommendations
 - Use OMDB if user asks for: poster, detailed plot, actors, awards
 - Use Web only for: "latest", "trending", "news", "today", "this week"
 - Prepare specific queries for each tool you decide to use
@@ -375,9 +459,11 @@ OUTPUT: Structured decision with resolved query and tool flags"""
             "needs_sql": plan.needs_sql,
             "needs_omdb": plan.needs_omdb,
             "needs_web": plan.needs_web,
+            "needs_semantic": plan.needs_semantic,
             "sql_query": plan.sql_query or "",
             "omdb_query": plan.omdb_query or "",
             "web_query": plan.web_query or "",
+            "semantic_query": plan.semantic_query or "",
             "current_step": "planned"
         }
     except Exception as e:
@@ -388,9 +474,11 @@ OUTPUT: Structured decision with resolved query and tool flags"""
             "needs_sql": False,
             "needs_omdb": False,
             "needs_web": False,
+            "needs_semantic": False,
             "sql_query": "",
             "omdb_query": "",
             "web_query": "",
+            "semantic_query": "",
             "current_step": "planned"
         }
 
@@ -566,6 +654,39 @@ def web_node(state: AgentState) -> dict:
             "current_step": "web_error"
         }
 
+def semantic_search_node(state: AgentState) -> dict:
+    """Execute semantic search on movie embeddings"""
+    semantic_query = state.get("semantic_query", "")
+
+    if not semantic_query:
+        semantic_query = state.get("resolved_query", "")
+
+    try:
+        # Execute semantic search
+        result = semantic_search.invoke({
+            "query": semantic_query,
+            "n_results": 5
+        })
+
+        # Create detailed source
+        detailed_source = {
+            "type": "semantic",
+            "name": "Semantic Search",
+            "details": "Vector DB: ChromaDB (OpenAI embeddings)"
+        }
+
+        return {
+            "semantic_result": result,
+            "sources_used": state.get("sources_used", []) + ["Semantic Search"],
+            "sources_detailed": state.get("sources_detailed", []) + [detailed_source],
+            "current_step": "semantic_executed"
+        }
+    except Exception as e:
+        return {
+            "semantic_result": json.dumps({"error": str(e)}),
+            "current_step": "semantic_error"
+        }
+
 def synthesizer_node(state: AgentState) -> dict:
     """Generate final response"""
     question = state.get("original_question", "")
@@ -574,6 +695,7 @@ def synthesizer_node(state: AgentState) -> dict:
     sql = state.get("sql_result", "[]")
     omdb = state.get("omdb_result", "{}")
     web = state.get("web_result", "{}")
+    semantic = state.get("semantic_result", "[]")
     sources = state.get("sources_used", [])
     catalog = state.get("db_catalog", {})
 
@@ -598,6 +720,9 @@ AVAILABLE DATA:
 
 --- Web Results ---
 {web}
+
+--- Semantic Search Results ---
+{semantic}
 
 SOURCES: {', '.join(sources)}
 
@@ -632,10 +757,16 @@ def should_run_web(state: AgentState) -> bool:
     """Check if web search should run"""
     return state.get("needs_web", False)
 
+def should_run_semantic(state: AgentState) -> bool:
+    """Check if semantic search should run"""
+    return state.get("needs_semantic", False)
+
 def route_from_planner(state: AgentState) -> str:
     """Route from planner to first tool or synthesizer"""
     if state.get("needs_sql"):
         return "sql"
+    elif state.get("needs_semantic"):
+          return "semantic"
     elif state.get("needs_omdb"):
         return "omdb"
     elif state.get("needs_web"):
@@ -645,12 +776,23 @@ def route_from_planner(state: AgentState) -> str:
 
 def route_from_sql(state: AgentState) -> str:
     """Route from SQL to next tool"""
-    if state.get("needs_omdb"):
+    if state.get("needs_semantic"):
+          return "semantic"
+    elif state.get("needs_omdb"):
         return "omdb"
     elif state.get("needs_web"):
         return "web"
     else:
         return "synthesize"
+    
+def route_from_semantic(state: AgentState) -> str:
+      """Route from semantic to next tool"""
+      if state.get("needs_omdb"):
+          return "omdb"
+      elif state.get("needs_web"):
+          return "web"
+      else:
+          return "synthesize"
 
 def route_from_omdb(state: AgentState) -> str:
     """Route from OMDB to next tool"""
@@ -668,6 +810,7 @@ def build_agent():
     
     workflow.add_node("planner", planner_node)
     workflow.add_node("sql", sql_node)
+    workflow.add_node("semantic", semantic_search_node)
     workflow.add_node("omdb", omdb_node)
     workflow.add_node("web", web_node)
     workflow.add_node("synthesize", synthesizer_node)
@@ -679,12 +822,13 @@ def build_agent():
     workflow.add_conditional_edges(
         "planner",
         route_from_planner,
-        ["sql", "omdb", "web", "synthesize"]
+        ["sql", "semantic", "omdb", "web", "synthesize"]
     )
     
     # All tools converge to synthesize
-    workflow.add_edge("sql", "synthesize")
-    workflow.add_edge("omdb", "synthesize")
+    workflow.add_edge("sql", "synthesize") #?? workflow.add_conditional_edges("sql", route_from_sql, ["semantic", "omdb", "web", "synthesize"])
+    workflow.add_edge("semantic", "synthesize") #?? workflow.add_conditional_edges("semantic", route_from_semantic, ["omdb", "web", "synthesize"]) 
+    workflow.add_edge("omdb", "synthesize") #?? workflow.add_conditional_edges("omdb", route_from_omdb, ["web", "synthesize"]) 
     workflow.add_edge("web", "synthesize")
     workflow.add_edge("synthesize", END)
     
@@ -709,15 +853,23 @@ if "db_catalog" not in st.session_state:
     if catalog.get("error"):
         welcome = f"❌ Error: {catalog['error']}"
     else:
+        # Welcome message
         welcome = "##### 👋 **Salut, moi c'est Albert Query**\n\n"
-        welcome += "###### Je suis là pour vous aider à explorer vos bases de données !\n\n"
+        welcome += "##### Je suis là pour t'aider à explorer tes bases de données !\n\n"
         welcome += "\n\n"
-        welcome += "**Bases de données disponibles:**\n"
+        welcome += "**Bases de données disponibles:**\n\n"
         for db_name, db_info in catalog["databases"].items():
-            if "error" not in db_info:
-                welcome += f"• {db_name}\n"
-        welcome += "\n**Outils**: SQL / OMDB / Recherche Web\n\n**Posez-moi une question !**"
-    
+                if "error" not in db_info:
+                        welcome += f" {db_name} -\n"
+        welcome += "**Outils disponibles**: Requête SQL / Recherche sémantique / API OMDB / Recherche Web\n\n"
+        welcome += "**Demande-moi quelque chose pour commencer !**\n\n"
+        welcome += "Par exemple :\n"
+        welcome += "- Quelles tables et colonnes sont disponibles dans les bases de données ?\n"
+        welcome += "- Combien de genres différents sont disponibles dans toutes les bases ?\n"
+        welcome += "- Trouve-moi 5 films d'action des années 2000 dans Netflix.\n"
+        welcome += "- Quels sont les films avec les meilleures notes sur Disney Plus ?\n"
+        welcome += "- Propose-moi des films d'action dans l'espace.\n"
+        
     st.session_state.chat_messages.append({"role": "assistant", "content": welcome})
 
 if "thread_id" not in st.session_state:
@@ -735,19 +887,23 @@ for msg in st.session_state.chat_messages:
             for idx, source in enumerate(msg["sources"]):
                 with cols[idx]:
                     if source.get("type") == "database":
-                        st.markdown(f"🗄️ **{source['name']}**")
+                        st.markdown(f"🗄️ Base de donnée SQL :{source['name']}")
+                        if "details" in source:
+                            st.caption(source["details"])
+                    elif source.get("type") == "semantic":
+                        st.markdown(f"🔍 Base de donnée vectorielle :{source['name']}")
                         if "details" in source:
                             st.caption(source["details"])
                     elif source.get("type") == "omdb":
                         if source.get("url"):
-                            st.markdown(f"🎬 [{source['name']}]({source['url']})")
+                            st.markdown(f"🎬 IMDB [{source['name']}]({source['url']})")
                         else:
-                            st.markdown(f"🎬 **{source['name']}**")
+                            st.markdown(f"🎬 API OMDB {source['name']}")
                     elif source.get("type") == "web":
                         if source.get("url"):
-                            st.markdown(f"🌐 [Web Search]({source['url']})")
+                            st.markdown(f"🌐 [Recherche Web]({source['url']})")
                         else:
-                            st.markdown(f"🌐 **Web Search**")
+                            st.markdown(f"🌐 Recherche Web")
 
 # User input
 if prompt := st.chat_input("Your question..."):
@@ -768,12 +924,15 @@ if prompt := st.chat_input("Your question..."):
             "resolved_query": "",
             "planning_reasoning": "",
             "sql_query": "",
+            "semantic_query": "",
             "omdb_query": "",
             "web_query": "",
             "needs_sql": False,
+            "needs_semantic": False,
             "needs_omdb": False,
             "needs_web": False,
             "sql_result": "[]",
+            "semantic_result": "[]",
             "omdb_result": "{}",
             "web_result": "{}",
             "sources_used": [],
@@ -792,6 +951,8 @@ if prompt := st.chat_input("Your question..."):
                 status.info("🧠 Albert réfléchit...")
             elif current == "sql_executed":
                 status.info("💾 Albert interroge la base de données SQL...")
+            elif current == "semantic_executed":
+                status.info("🔍 Albert effectue une recherche sémantique... (RAG)")
             elif current == "omdb_executed":
                 status.info("🎬 Albert interroge l'API OMDB...")
             elif current == "web_executed":
@@ -818,19 +979,23 @@ if prompt := st.chat_input("Your question..."):
                     for idx, source in enumerate(sources_detailed):
                         with cols[idx]:
                             if source.get("type") == "database":
-                                st.markdown(f"🗄️ **{source['name']}**")
+                                st.markdown(f"🗄️ Base de donnée SQL :{source['name']}")
+                                if "details" in source:
+                                    st.caption(source["details"])
+                            elif source.get("type") == "semantic":
+                                st.markdown(f"🔍 Base de donnée vectorielle :{source['name']}")
                                 if "details" in source:
                                     st.caption(source["details"])
                             elif source.get("type") == "omdb":
                                 if source.get("url"):
-                                    st.markdown(f"🎬 [{source['name']}]({source['url']})")
+                                    st.markdown(f"🎬 IMDB [{source['name']}]({source['url']})")
                                 else:
-                                    st.markdown(f"🎬 **{source['name']}**")
+                                    st.markdown(f"🎬 API OMDB {source['name']}")
                             elif source.get("type") == "web":
                                 if source.get("url"):
                                     st.markdown(f"🌐 [Recherche Web]({source['url']})")
                                 else:
-                                    st.markdown(f"🌐 **Recherche Web**")
+                                    st.markdown(f"🌐 Recherche Web")
 
                 # Save message with sources
                 st.session_state.chat_messages.append({
