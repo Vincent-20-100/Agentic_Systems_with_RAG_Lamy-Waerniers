@@ -9,9 +9,17 @@ from langchain_openai import ChatOpenAI
 # Load environment variables
 load_dotenv()
 
-# API Keys
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+# API Keys - Support both local .env and Streamlit Cloud secrets
+try:
+    import streamlit as st
+    # Try Streamlit secrets first (for Cloud deployment)
+    OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
+    OMDB_API_KEY = st.secrets.get("OMDB_API_KEY", os.getenv("OMDB_API_KEY"))
+except (ImportError, FileNotFoundError, AttributeError):
+    # Fallback to environment variables (for local development)
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+
 OMDB_BASE_URL = "http://www.omdbapi.com/"
 
 # Paths - Using absolute paths based on the location of this file
