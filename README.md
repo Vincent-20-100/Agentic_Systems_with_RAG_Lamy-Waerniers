@@ -13,12 +13,9 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
-- [Installation](#installation)
-- [Usage](#usage)
 - [Project Structure](#project-structure)
 - [Components](#components)
 - [Workflow](#workflow)
-- [Technologies](#technologies)
 - [Future Improvements](#future-improvements)
 - [Contributors](#contributors)
 - [License](#license)
@@ -137,14 +134,19 @@ Our system follows an **agentic architecture** using LangGraph to create a state
 ```
 Agentic_Systems_with_RAG_Lamy-Waerniers/
 │
-├── code/                                    # Main source code
-│   ├── albert_query_app.py                  # Main Streamlit application (1009 lines)
-│   ├── embedding_manager.py                 # Vector embedding management (418 lines)
-│   ├── architecture.md                      # System architecture documentation
-│   ├── embeding.ipynb                       # Embedding pipeline notebook
-│   ├── SQLdb_creator.ipynb                  # Database creation from CSVs
-│   ├── testing.ipynb                        # API and integration tests
-│   └── test_semantic_search.ipynb           # Semantic search validation
+├── code/                                    # Main source code (modular architecture)
+│   ├── app.py                               # Streamlit UI and main entry point
+│   ├── agent.py                             # LangGraph workflow construction
+│   ├── nodes.py                             # All workflow nodes (planner, SQL, semantic, OMDB, web, synthesizer)
+│   ├── tools.py                             # Tool implementations (SQL query, web search, OMDB API, semantic search)
+│   ├── models.py                            # Shared type definitions (AgentState, PlannerOutput, SQLOutput)
+│   ├── config.py                            # Centralized configuration (API keys, paths, LLM instance)
+│   ├── utils.py                             # Helper functions (catalog builder, routing logic)
+│   ├── embedding.py                         # Vector embedding utilities
+│   └── notebooks/                           # Jupyter notebooks for development
+│       ├── embeding.ipynb                   # Embedding pipeline notebook
+│       ├── SQLdb_creator.ipynb              # Database creation from CSVs
+│       └── test_semantic_search.ipynb       # Semantic search validation
 │
 ├── data/                                    # Data storage
 │   ├── csv_db/                              # Source CSV files
@@ -171,13 +173,64 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 └── README.md                                # This file
 ```
 
+### 🏛️ Architecture Breakdown
+
+The codebase follows a **modular architecture** to avoid circular imports and improve maintainability:
+
+#### Core Modules:
+
+- **`config.py`** - Central configuration hub
+  - API keys (OpenAI, OMDB)
+  - Absolute paths to data folders
+  - LLM instance (ChatOpenAI)
+
+- **`models.py`** - Shared type definitions
+  - `AgentState`: TypedDict defining the workflow state
+  - `PlannerOutput`: Pydantic model for planner decisions
+  - `SQLOutput`: Pydantic model for SQL execution decisions
+
+- **`tools.py`** - Tool implementations
+  - `execute_sql_query()`: Query SQLite databases
+  - `semantic_search()`: Vector similarity search with ChromaDB
+  - `omdb_api()`: Fetch movie metadata from OMDB
+  - `web_search()`: DuckDuckGo web search
+
+- **`nodes.py`** - LangGraph workflow nodes
+  - `planner_node()`: Analyzes question and decides which tools to use
+  - `sql_node()`: Generates and executes SQL queries
+  - `semantic_search_node()`: Performs vector search
+  - `omdb_node()`: Fetches enriched movie data
+  - `web_node()`: Searches the web
+  - `synthesizer_node()`: Combines results into natural language response
+
+- **`utils.py`** - Helper functions
+  - `build_db_catalog()`: Introspects database schema
+  - `format_catalog_for_llm()`: Formats catalog for LLM prompts
+  - Routing functions for conditional edges
+
+- **`agent.py`** - LangGraph workflow builder
+  - Constructs the StateGraph
+  - Defines node connections and routing
+  - Compiles workflow with MemorySaver checkpointer
+
+- **`app.py`** - Streamlit application
+  - UI components (chat interface, source attribution)
+  - Session state management
+  - Workflow execution and streaming
+
+This modular design ensures:
+- ✅ No circular import dependencies
+- ✅ Clear separation of concerns
+- ✅ Easy testing and maintenance
+- ✅ Reusable components
+
 ---
 
 ## 🧩 Components
 
-### 1. Main Application (`albert_query_app.py`)
+### 1. Workflow Nodes (`nodes.py`)
 
-The core orchestrator built with **Streamlit** and **LangGraph**.
+The core workflow nodes built with **LangGraph**.
 
 **Key Components:**
 
@@ -252,30 +305,42 @@ def synthesizer_node(state: AgentState) -> dict:
     # Includes source attribution
 ```
 
-### 2. Embedding Manager (`embedding_manager.py`)
+### 2. Tools (`tools.py`)
 
-Handles creation and management of vector embeddings for semantic search.
+Implements all the tools that the agent can use for data retrieval.
 
-**Key Functions:**
+**Tool Functions:**
 
 ```python
-def get_or_create_collection(chroma_path, collection_name="movie_descriptions"):
-    """Gets or creates ChromaDB collection with OpenAI embeddings"""
+@tool
+def execute_sql_query(query: str, db_name: str, state_catalog: dict) -> str:
+    """Execute SQL query on specified database"""
+    # Validates database exists in catalog
+    # Connects to SQLite database
+    # Executes query and returns JSON results
 
-def embed_movies_if_not_exists(collection, movies, batch_size=100):
-    """Embeds movies only if not already in collection"""
-    # Checks existing IDs to avoid duplicates
-    # Batches for efficiency
-    # Tracks progress with tqdm
+@tool
+def semantic_search(query: str, n_results: int = 5, table_filter: str = None) -> str:
+    """Execute semantic search on movie embeddings"""
+    # Connects to ChromaDB collection
+    # Embeds query using OpenAI embeddings
+    # Searches vector database for similar movies
+    # Returns top-k results with similarity scores
 
-def query_movies(collection, query_text, n_results=5, where_filter=None):
-    """Queries movies by semantic similarity"""
-    # Embeds query with same model
-    # Searches vector DB
-    # Returns ranked results with similarity scores
+@tool
+def omdb_api(by: str = "title", t: str = None, plot: str = "full") -> str:
+    """Query OMDb API for movie details"""
+    # Queries OMDB with API key
+    # Returns detailed movie information
+
+@tool
+def web_search(query: str, num_results: int = 5) -> str:
+    """Web search via DuckDuckGo"""
+    # Executes web search
+    # Returns search results
 ```
 
-**Embedding Structure:**
+**Embedding Structure (ChromaDB):**
 ```python
 {
     "id": "net0042",                    # Unique ID (prefix + index)
@@ -439,20 +504,20 @@ conversations/
 
 ```
 ┌─────────────────────────────────────────┐
-│  ⚙️ Settings                            │
+│  ⚙️ Settings                           │
 ├─────────────────────────────────────────┤
-│  User ID: [user_123          ]         │
+│  User ID: [user_123]                    │
 │                                         │
-│  🔑 OpenAI API Key:                     │
-│  [sk-proj-******************] [Save]   │
+│  🔑 OpenAI API Key:                    │
+│  [sk-proj-******************] [Save]    │
 │                                         │
-│  🎬 OMDB API Key:                       │
-│  [8871ab87           ] [Save]          │
+│  🎬 OMDB API Key:                      │
+│  [8871ab87           ] [Save]           │
 │                                         │
-│  💰 Token Usage This Session: 1,234     │
-│  💵 Estimated Cost: $0.05               │
+│  💰 Token Usage This Session: 1,234    │
+│  💵 Estimated Cost: $0.05              │
 │                                         │
-│  [Clear History] [Export Data]         │
+│  [Clear History] [Export Data]          │
 └─────────────────────────────────────────┘
 ```
 
@@ -531,7 +596,7 @@ def evaluator_node(state: AgentState) -> dict:
 
 **Improvement Strategies:**
 
-#### A. **Enhance Description Quality** (Priority #1)
+#### A. **Enhance Movie Description Quality** (Priority #1)
 Currently, we only embed the plot description field from databases (single sentence).
 
 **Solution:**
@@ -661,10 +726,10 @@ response = structured_llm.invoke(synthesis_prompt)
 
 ## 👥 Contributors
 
-This project was developed as part of our Master's degree at **Albert School** in collaboration with **Mines Paris - PSL**.
+This project was developed as part of our Master's degree at **Albert School X Mines Paris - PSL**.
 
 **Team:**
-- Vincent Lamy & Alexandre Waerniers - Architecture, LangGraph workflow, semantic search
+- Vincent Lamy & Alexandre Waerniers
 
 **Institution:**
 - Albert School (Paris, France)
@@ -675,42 +740,6 @@ This project was developed as part of our Master's degree at **Albert School** i
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## 🙏 Acknowledgments
-
-We would like to thank:
-- **OpenAI** for providing the GPT-4 and embedding APIs
-- **LangChain** team for the excellent orchestration framework
-- **ChromaDB** for the vector database
-- **Streamlit** for the intuitive UI framework
-- **OMDb API** for movie metadata
-- Our professors and advisors at Albert School and Mines Paris
-
----
-
-## 📞 Contact
-
-For questions, suggestions, or collaboration:
-- 🐙 GitHub: [Vincent-20-100](https://github.com/Vincent-20-100)
-- 🏫 Institution: Albert School / Mines Paris - PSL
-
----
-
-## 🎓 Academic Context
-
-This project demonstrates:
-- ✅ Agentic AI architectures with LangGraph
-- ✅ Multi-tool orchestration and planning
-- ✅ RAG (Retrieval Augmented Generation) patterns
-- ✅ Vector databases and semantic search
-- ✅ Production-ready ML system design
-- ✅ Full-stack AI application development
-
-**Course:** Agentic Systems with RAG
-**Year:** 2025 (M1)
-**Institution:** Albert School x Mines Paris - PSL
 
 ---
 
