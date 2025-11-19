@@ -85,5 +85,3 @@ llm = ChatOpenAI(
     api_key=OPENAI_API_KEY,
     max_tokens=4000,
 )
-
-print("Configuration loaded successfully! OpenAI + OMDB keys are present.")

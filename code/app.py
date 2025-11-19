@@ -9,17 +9,6 @@ from config import OPENAI_API_KEY, DB_FOLDER_PATH
 # Configuration
 st.set_page_config(page_title="Albert query", page_icon="🧙‍♂️", layout="wide")
 
-st.markdown("""
-<style>
-    .stChatMessage[data-testid="user-message"] {
-        flex-direction: row-reverse;
-        text-align: right;
-    }
-    .stChatMessage[data-testid="user-message"] > div {
-        background-color: #e3f2fd;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 if not OPENAI_API_KEY:
     st.error("❌ OPENAI_API_KEY missing")
@@ -43,7 +32,7 @@ if "db_catalog" not in st.session_state:
         welcome = f"❌ Error: {catalog['error']}"
     else:
         # Welcome message
-        welcome = "##### 👋 **Salut, moi c'est Albert Query**\n\n"
+        welcome = "##### 👋 **Salut, moi c'est Albert Query** 🧙‍♂️\n\n"
         welcome += "##### Je suis là pour t'aider à explorer tes bases de données !\n\n"
         welcome += "\n\n"
         welcome += "**Bases de données disponibles:**\n\n"
@@ -54,10 +43,9 @@ if "db_catalog" not in st.session_state:
         welcome += "**Demande-moi quelque chose pour commencer !**\n\n"
         welcome += "Par exemple :\n"
         welcome += "- Quelles tables et colonnes sont disponibles dans les bases de données ?\n"
-        welcome += "- Combien de genres différents sont disponibles dans toutes les bases ?\n"
-        welcome += "- Trouve-moi 5 films d'action des années 2000 dans Netflix.\n"
-        welcome += "- Quels sont les films avec les meilleures notes sur Disney Plus ?\n"
-        welcome += "- Propose-moi des films d'action dans l'espace.\n"
+        welcome += "- Combien de genres différents sont disponibles ?\n"
+        welcome += "- Montre moi l'affiche de Gladiator de Ridley Scott.\n"
+        welcome += "- Propose-moi des films d'anquêtes aux ambiances sombre beacoup de suspens. (semantic search).\n"
         
     st.session_state.chat_messages.append({"role": "assistant", "content": welcome})
 

@@ -34,6 +34,7 @@ AVAILABLE TOOLS (priority order):
 1. SQL Database - Query movies/series data (titles, ratings, years, genres, cast)
     → Use for: filtering by year, rating, type, counting, aggregations
 2. Semantic Search - Find movies by description/themes/plot similarity (vector search)
+    → Use when: The query involves plot details, themes, or content-based recommendations
     → Use for: content-based search, "movies like X", plot descriptions, themes
      IMPORTANT: Semantic query MUST be in English!
     → Two approaches: By KEYWORD Like "romance" or by Full plot sentence like "A detective solving a mysterious murder"
