@@ -32,6 +32,7 @@ if "db_catalog" not in st.session_state:
         welcome = f"❌ Error: {catalog['error']}"
     else:
         # Welcome message
+        welcome = "#🧙‍♂️\n\n"
         welcome = "##### 👋 **Salut, moi c'est Albert Query** 🧙‍♂️\n\n"
         welcome += "##### Je suis là pour t'aider à explorer tes bases de données !\n\n"
         welcome += "\n\n"
