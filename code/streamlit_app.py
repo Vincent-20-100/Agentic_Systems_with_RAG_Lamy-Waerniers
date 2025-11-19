@@ -16,7 +16,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS pour un design moderne
+# Custom CSS 
 st.markdown("""
     <style>
     [data-testid="stMainBlockContainer"] {
@@ -82,6 +82,111 @@ st.markdown("""
         background: #e8eaf6;
         border-left: 4px solid #764ba2;
     }
+
+    /* Animations de chargement */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+    }
+
+    @keyframes dots {
+        0%, 20% { content: '.'; }
+        40% { content: '..'; }
+        60%, 100% { content: '...'; }
+    }
+
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes glow {
+        0%, 100% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.8); }
+    }
+
+    /* Conteneur de statut animé */
+    .albert-status {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 12px;
+        border-left: 5px solid #667eea;
+        animation: slideInLeft 0.5s ease-out, glow 2s ease-in-out infinite;
+        margin-bottom: 1rem;
+    }
+
+    .albert-status-icon {
+        font-size: 2.5rem;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .albert-status-text {
+        flex: 1;
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #2d3748;
+    }
+
+    .albert-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(102, 126, 234, 0.3);
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    /* Dots animés */
+    .loading-dots::after {
+        content: '...';
+        animation: dots 1.5s steps(3, end) infinite;
+    }
+
+    /* Style pour les différents types de statut */
+    .status-thinking {
+        border-left-color: #667eea;
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    }
+
+    .status-sql {
+        border-left-color: #2e7d32;
+        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    }
+
+    .status-semantic {
+        border-left-color: #1565c0;
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    }
+
+    .status-omdb {
+        border-left-color: #e65100;
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+    }
+
+    .status-web {
+        border-left-color: #6a1b9a;
+        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    }
+
+    .status-complete {
+        border-left-color: #2e7d32;
+        background: linear-gradient(135deg, #e8f5e9 0%, #a5d6a7 100%);
+        animation: slideInLeft 0.5s ease-out;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -126,7 +231,7 @@ st.markdown("""
 with st.sidebar:
 
     catalog = st.session_state.db_catalog
-    
+
     if catalog.get("error"):
         st.error(f"❌ {catalog['error']}")
     else:
@@ -140,7 +245,7 @@ with st.sidebar:
                             with st.expander(f"📄 {table_name}"):
                                 row_count = table_info.get("row_count", "?")
                                 st.caption(f"**Lignes:** {row_count}")
-                                
+
                                 st.markdown("**Colonnes:**")
                                 for col in table_info.get("columns", []):
                                     col_name = col["name"]
@@ -155,14 +260,13 @@ with st.sidebar:
                     ("🎬", "API OMDB", "Informations sur les films"),
                     ("🌐", "Recherche Web", "Recherche sur internet")
                 ]
-                
+
                 for icon, name, desc in tools:
-                    with st.expander(f"{icon} {name}"):  # <-- Add nesting here
-                        st.markdown(f"*{desc}*")
-        
+                    st.markdown(f"**{icon} {name}**  \n*{desc}*")
+
         st.markdown("#### 💡 Exemples de questions")
         examples = [
-            "Combien de genres différents existent ?",
+            "Combien de genres de films y a-t-il dans nos bases de données ?",
             "Montre moi l'affiche de Gladiator de Ridley Scott.",
             "Propose des films d'enquêtes avec ambiance sombre. (semantic search)",
         ]
@@ -184,7 +288,7 @@ with chat_container:
             st.markdown("""
             **Salut ! 👋 Moi c'est Albert Query**
 
-            Je suis là pour t'aider à explorer tes bases de données de façon intelligente. 
+            Je suis là pour t'aider à explorer tes bases de données de façon intelligente.
 
             Pose-moi une question pour commencer !
             """)
@@ -193,26 +297,26 @@ with chat_container:
             "content": "Message de bienvenue",
             "is_welcome": True
         })
-    
+
     # Afficher l'historique des messages
     for msg in st.session_state.chat_messages:
         if msg.get("is_welcome"):
             continue
-            
+
         if msg["role"] == "assistant":
             with st.chat_message("assistant", avatar="🧙‍♂️"):
                 st.markdown(msg["content"])
-                
+
                 # Afficher les sources si disponibles
                 if "sources" in msg and msg["sources"]:
                     st.divider()
                     st.caption("📚 **Sources utilisées:**")
-                    
+
                     cols = st.columns(min(3, len(msg["sources"])))
                     for idx, source in enumerate(msg["sources"]):
                         with cols[idx % 3]:
                             source_type = source.get("type", "")
-                            
+
                             if source_type == "database":
                                 st.markdown(f"""
                                     <div class="source-badge db-badge">
@@ -221,7 +325,7 @@ with chat_container:
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
                                     st.caption(source["details"])
-                                    
+
                             elif source_type == "semantic":
                                 st.markdown(f"""
                                     <div class="source-badge semantic-badge">
@@ -230,7 +334,7 @@ with chat_container:
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
                                     st.caption(source["details"])
-                                    
+
                             elif source_type == "omdb":
                                 url = source.get("url", "")
                                 if url:
@@ -245,7 +349,7 @@ with chat_container:
                                         🎬 OMDB: {source['name']}
                                         </div>
                                     """, unsafe_allow_html=True)
-                                    
+
                             elif source_type == "web":
                                 url = source.get("url", "")
                                 if url:
@@ -260,30 +364,30 @@ with chat_container:
                                         🌐 Recherche Web
                                         </div>
                                     """, unsafe_allow_html=True)
-        
+
         else:  # User message
-            with st.chat_message("user", avatar="👤"):
+            with st.chat_message("user", avatar="🥸"):
                 st.markdown(msg["content"])
 
 # =================================
 # User Input & Processing
 # =================================
 if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
-    
+
     # Ajouter le message utilisateur
     st.session_state.chat_messages.append({"role": "user", "content": prompt})
     st.session_state.agent_messages.append(HumanMessage(content=prompt))
-    
+
     # Afficher le message utilisateur
-    with st.chat_message("user", avatar="👤"):
+    with st.chat_message("user", avatar="🧐"):
         st.markdown(prompt)
-    
-    # Traitement par l'agent
+
+    # Traitement par l'agent avec animations
     with st.chat_message("assistant", avatar="🧙‍♂️"):
         status = st.empty()
         response_placeholder = st.empty()
         sources_placeholder = st.empty()
-        
+
         inputs = {
             "messages": st.session_state.agent_messages,
             "db_catalog": st.session_state.db_catalog,
@@ -306,47 +410,83 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
             "sources_detailed": [],
             "current_step": ""
         }
-        
+
         config = {"configurable": {"thread_id": st.session_state.thread_id}}
-        
+
         result = None
         for step in app.stream(inputs, config=config, stream_mode="values"):
             result = step
             current = step.get("current_step", "")
-            
+
             if current == "planned":
-                status.info("🧠 Albert réfléchit à ta question...")
+                status.markdown("""
+                    <div class="albert-status status-thinking">
+                        <div class="albert-status-icon">🧠</div>
+                        <div class="albert-status-text">Albert réfléchit à ta question<span class="loading-dots"></span></div>
+                        <div class="albert-spinner"></div>
+                    </div>
+                """, unsafe_allow_html=True)
             elif current == "sql_executed":
-                status.info("💾 Albert interroge la base de données SQL...")
+                status.markdown("""
+                    <div class="albert-status status-sql">
+                        <div class="albert-status-icon">💾</div>
+                        <div class="albert-status-text">Albert interroge la base de données SQL<span class="loading-dots"></span></div>
+                        <div class="albert-spinner"></div>
+                    </div>
+                """, unsafe_allow_html=True)
             elif current == "semantic_executed":
-                status.info("🔍 Albert effectue une recherche sémantique (RAG)...")
+                status.markdown("""
+                    <div class="albert-status status-semantic">
+                        <div class="albert-status-icon">🔍</div>
+                        <div class="albert-status-text">Albert effectue une recherche sémantique (RAG)<span class="loading-dots"></span></div>
+                        <div class="albert-spinner"></div>
+                    </div>
+                """, unsafe_allow_html=True)
             elif current == "omdb_executed":
-                status.info("🎬 Albert interroge OMDB...")
+                status.markdown("""
+                    <div class="albert-status status-omdb">
+                        <div class="albert-status-icon">🎬</div>
+                        <div class="albert-status-text">Albert interroge OMDB<span class="loading-dots"></span></div>
+                        <div class="albert-spinner"></div>
+                    </div>
+                """, unsafe_allow_html=True)
             elif current == "web_executed":
-                status.info("🌐 Albert recherche sur le web...")
+                status.markdown("""
+                    <div class="albert-status status-web">
+                        <div class="albert-status-icon">🌐</div>
+                        <div class="albert-status-text">Albert recherche sur le web<span class="loading-dots"></span></div>
+                        <div class="albert-spinner"></div>
+                    </div>
+                """, unsafe_allow_html=True)
             elif current == "complete":
-                status.success("✅ Réponse prête !")
-        
+                status.markdown("""
+                    <div class="albert-status status-complete">
+                        <div class="albert-status-icon">✅</div>
+                        <div class="albert-status-text">Réponse prête !</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                time.sleep(0.5)  # Petit délai pour voir le message "complete"
+
         if result:
             status.empty()
-            
+
             # Extraire la réponse finale
             final_msgs = [m for m in result.get("messages", []) if isinstance(m, AIMessage)]
             if final_msgs:
                 response = final_msgs[-1].content
                 response_placeholder.markdown(response)
-                
+
                 # Afficher les sources
                 sources_detailed = result.get("sources_detailed", [])
                 if sources_detailed:
                     sources_placeholder.divider()
                     sources_placeholder.caption("📚 **Sources utilisées:**")
-                    
+
                     cols = sources_placeholder.columns(min(3, len(sources_detailed)))
                     for idx, source in enumerate(sources_detailed):
                         with cols[idx % 3]:
                             source_type = source.get("type", "")
-                            
+
                             if source_type == "database":
                                 st.markdown(f"""
                                     <div class="source-badge db-badge">
@@ -355,7 +495,7 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
                                     st.caption(source["details"])
-                                    
+
                             elif source_type == "semantic":
                                 st.markdown(f"""
                                     <div class="source-badge semantic-badge">
@@ -364,7 +504,7 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
                                     st.caption(source["details"])
-                                    
+
                             elif source_type == "omdb":
                                 url = source.get("url", "")
                                 if url:
@@ -379,7 +519,7 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
                                         🎬 OMDB: {source['name']}
                                         </div>
                                     """, unsafe_allow_html=True)
-                                    
+
                             elif source_type == "web":
                                 url = source.get("url", "")
                                 if url:
@@ -394,14 +534,14 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
                                         🌐 Recherche Web
                                         </div>
                                     """, unsafe_allow_html=True)
-                
+
                 # Sauvegarder le message avec les sources
                 st.session_state.chat_messages.append({
                     "role": "assistant",
                     "content": response,
                     "sources": sources_detailed
                 })
-                
+
                 # Mettre à jour l'historique de l'agent
                 user_msgs = [m for m in result["messages"] if isinstance(m, HumanMessage)]
                 if user_msgs:
