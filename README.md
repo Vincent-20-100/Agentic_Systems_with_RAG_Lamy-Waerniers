@@ -8,35 +8,11 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.0.2-00ADD8.svg)](https://langchain-ai.github.io/langgraph/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-1.3.4-FF6F61.svg)](https://www.trychroma.com/)
 
-## Installation & Démarrage 🚀
-
-### Étape 1 : Cloner le projet
-
-### Étape 2 : Créer un environnement virtuel
-
-### Étape 3 : Installer les dépendances
-requirements.txt
-
-### Étape 4 : Configurer les variables d'environnement
-Créez un fichier `.env` à la racine du projet :
-Ouvrez le fichier `.env` et remplissez les variables nécessaires :
-```env
-OPENAI_API_KEY="your_openai_api_key"
-OMDB_API_KEY="your_omdb_api_key"
-```
-> **⚠️ Important** : Ne committez jamais votre fichier `.env` contenant les clés sensibles. Il doit être ajouté à `.gitignore`.
-
-### Étape 5 : Lancer l'application
-```bash
-streamlit run code/streamlit_app.py
-```
-L'application s'ouvrira automatiquement dans votre navigateur à l'adresse `http://localhost:8501`
-
----
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Installation](#installation)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
@@ -71,6 +47,45 @@ Unlike traditional chatbots, Albert Query:
 
 ---
 
+## Installation & Run 🚀
+
+### Step 1: Clone the repo
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
+
+### Step 2: Create a virtual env
+```bash
+python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# or
+venv\Scripts\activate  # Windows
+```
+
+### Step 3: Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 4: Configure environment variables
+Create a `.env` file at the root and add:
+```env
+OPENAI_API_KEY="your_openai_api_key"
+OMDB_API_KEY="your_omdb_api_key"
+```
+
+### Step 5: Download data files
+Download from [this folder](https://drive.google.com/drive/folders/1Z1vqq8Q9Hw3VKBpmrqh6aiE6ee28mcCG?usp=drive_link) and place them in the `data/` folder. Don't change the file names.
+
+### Step 6: Run the app
+```bash
+streamlit run code/streamlit_app.py
+```
+
+The app will open at `http://localhost:8501`
+
+---
 ## ✨ Features
 
 ### Core Capabilities
