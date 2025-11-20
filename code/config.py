@@ -1,13 +1,13 @@
 # =================================
-# ========== CONFIGURATION =========
+# ========= CONFIGURATION =========
 # =================================
 import os
 import pathlib
 from langchain_openai import ChatOpenAI
 
-# =============================================================================
-# API KEYS LOADING — 2025-PROOF (local + Streamlit Cloud)
-# =============================================================================
+# ==================================
+# ======= API KEYS LOADING =========
+# ==================================
 
 def load_api_keys():
     """
@@ -25,24 +25,28 @@ def load_api_keys():
 
     if is_streamlit_cloud:
         import streamlit as st
-        openai_key = st.secrets.get("OPENAI_API_KEY")
-        omdb_key   = st.secrets.get("OMDB_API_KEY")
+        openai_key       = st.secrets.get("OPENAI_API_KEY")
+        omdb_key         = st.secrets.get("OMDB_API_KEY")
+        langfuse_secret  = st.secrets.get("LANGFUSE_SECRET_KEY")
+        langfuse_public  = st.secrets.get("LANGFUSE_PUBLIC_KEY")
     else:
         # Local development
         from dotenv import load_dotenv
         load_dotenv()
-        openai_key = os.getenv("OPENAI_API_KEY")
-        omdb_key   = os.getenv("OMDB_API_KEY")
+        openai_key       = os.getenv("OPENAI_API_KEY")
+        omdb_key         = os.getenv("OMDB_API_KEY")
+        langfuse_secret  = os.getenv("LANGFUSE_SECRET_KEY")
+        langfuse_public  = os.getenv("LANGFUSE_PUBLIC_KEY")
 
-    return openai_key, omdb_key
+    return openai_key, omdb_key, langfuse_secret, langfuse_public
 
 
 # Load keys at import time
-OPENAI_API_KEY, OMDB_API_KEY = load_api_keys()
+OPENAI_API_KEY, OMDB_API_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY = load_api_keys()
 
-# =============================================================================
-# IMMEDIATE & CLEAR VALIDATION — fails fast with helpful message
-# =============================================================================
+# ==================================
+# ========== VALIDATION ============
+# ==================================
 
 missing = []
 
@@ -52,6 +56,12 @@ if not OPENAI_API_KEY:
 if not OMDB_API_KEY:
     missing.append("OMDB_API_KEY")
 
+if not LANGFUSE_SECRET_KEY:
+    missing.append("LANGFUSE_SECRET_KEY")
+
+if not LANGFUSE_PUBLIC_KEY:
+    missing.append("LANGFUSE_PUBLIC_KEY")
+
 if missing:
     raise ValueError(
         "Missing required API key(s)!\n\n"
@@ -59,25 +69,28 @@ if missing:
         + "\n".join([f'{key} = "your_key_here"' for key in missing]) +
         "\n\n"
         "Example:\n"
-        '[secrets]\n'
+        "[secrets]\n"
         'OPENAI_API_KEY = "sk-proj-..."\n'
-        'OMDB_API_KEY = "12345678"'
+        'OMDB_API_KEY = "12345678"\n'
+        'LANGFUSE_SECRET_KEY = "sk-lf-..."\n'
+        'LANGFUSE_PUBLIC_KEY = "pk-lf-..."'
     )
 
-# =============================================================================
-# CONSTANTS & PATHS
-# =============================================================================
+# ==================================
+# ======= CONSTANTS & PATHS ========
+# ==================================
 
 OMDB_BASE_URL = "http://www.omdbapi.com/"
+LANGFUSE_BASE_URL = "https://cloud.langfuse.com"
 
 CURRENT_FILE = pathlib.Path(__file__).resolve()
 PROJECT_ROOT = CURRENT_FILE.parent.parent
 DB_FOLDER_PATH = str(PROJECT_ROOT / "data" / "databases")
 CHROMA_PATH    = str(PROJECT_ROOT / "data" / "vector_database")
 
-# =============================================================================
-# LLM INSTANCE
-# =============================================================================
+# ==================================
+# ========= LLM INSTANCE ===========
+# ==================================
 
 llm = ChatOpenAI(
     model="gpt-4o-mini",

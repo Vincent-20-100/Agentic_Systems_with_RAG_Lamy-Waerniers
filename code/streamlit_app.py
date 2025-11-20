@@ -5,7 +5,9 @@ import time
 from utils import build_db_catalog
 from agent import app
 from config import OPENAI_API_KEY, DB_FOLDER_PATH
-
+from langfuse.langchain import CallbackHandler
+ 
+langfuse_handler = CallbackHandler()
 
 # =================================
 # Configuration
@@ -412,7 +414,8 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
             "current_step": ""
         }
 
-        config = {"configurable": {"thread_id": st.session_state.thread_id}}
+        config = {"thread_id": st.session_state.thread_id,
+                  "callbacks": [langfuse_handler]}
 
         result = None
         for step in app.stream(inputs, config=config, stream_mode="values"):

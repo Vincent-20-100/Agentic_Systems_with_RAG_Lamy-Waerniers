@@ -13,6 +13,7 @@
 
 - [Overview](#overview)
 - [Installation](#installation)
+- [Monitoring with Langfuse](#monitoring-with-langfuse)
 - [Features](#features)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
@@ -73,9 +74,15 @@ Create a `.env` file at the root and add:
 ```env
 OPENAI_API_KEY="your_openai_api_key"
 OMDB_API_KEY="your_omdb_api_key"
+LANGFUSE_SECRET_KEY = "your_langfuse_secret_key"
+LANGFUSE_PUBLIC_KEY = "your_langfuse_public_key"
 ```
 
-### Step 5: Download data files
+### Step 5: Data files
+You can use the jupyter notebooks (code/notebooks) to create the SQL and the cevtor database using the .csv files.
+
+**OR**
+
 Download from [this folder](https://drive.google.com/drive/folders/1Z1vqq8Q9Hw3VKBpmrqh6aiE6ee28mcCG?usp=drive_link) and place them in the `data/` folder. Don't change the file names.
 
 ### Step 6: Run the app
@@ -84,6 +91,41 @@ streamlit run code/streamlit_app.py
 ```
 
 The app will open at `http://localhost:8501`
+
+---
+
+## Monitoring with Langfuse
+
+The application includes integrated monitoring and observability through [Langfuse](https://langfuse.com/), allowing you to track and analyze LLM interactions in real-time.
+
+### Setup
+
+1. Create a free account at [cloud.langfuse.com](https://cloud.langfuse.com)
+2. Generate API keys from your project settings
+3. Add them to your `.env` file:
+   ```env
+   LANGFUSE_SECRET_KEY="sk-lf-..."
+   LANGFUSE_PUBLIC_KEY="pk-lf-..."
+   ```
+
+### Features
+
+The Langfuse integration automatically tracks:
+- **LLM calls**: All GPT-4o-mini requests and responses
+- **Token usage**: Input/output token counts per query
+- **Latency**: Response times for each agent node
+- **Conversation traces**: Full workflow execution from planner to synthesizer
+- **Cost estimation**: Automatic cost tracking based on token usage
+
+### Viewing Traces
+
+Access your Langfuse dashboard at [cloud.langfuse.com](https://cloud.langfuse.com) to:
+- View detailed traces of each user query
+- Analyze tool selection patterns (SQL, semantic, OMDB, web)
+- Monitor performance metrics and identify bottlenecks
+- Debug errors and track edge cases
+
+All traces are automatically organized by session ID for easy conversation tracking.
 
 ---
 ## Features

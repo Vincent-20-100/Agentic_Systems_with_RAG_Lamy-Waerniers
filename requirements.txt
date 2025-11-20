@@ -39,3 +39,4 @@ SQLAlchemy
 pydantic
 pydantic-settings
 tenacity
+langfuse
