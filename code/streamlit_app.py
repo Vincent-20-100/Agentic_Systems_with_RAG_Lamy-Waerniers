@@ -6,6 +6,7 @@ from utils import build_db_catalog
 from agent import app
 from config import OPENAI_API_KEY, DB_FOLDER_PATH
 
+
 # =================================
 # Configuration
 # =================================
