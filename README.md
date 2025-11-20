@@ -173,42 +173,19 @@ All traces are automatically organized by session ID for easy conversation track
 
 Our system follows an **agentic architecture** using LangGraph to create a stateful, multi-tool workflow:
 
-```
-┌───────────────────────────────────────────┐
-│               USER QUESTION               │
-└────────────────────┬──────────────────────┘
-                     │
-                     ▼
-            ┌────────────────┐
-            │  PLANNER NODE  │ ← Analyzes question + history
-            │   (GPT-4o)     │   Decides which tools needed
-            └────────┬───────┘
-                     │
-                     ▼
-            ┌────────────────┐
-            │ ROUTER (cond.) │ ← Routes to needed tools only
-            └───┬──┬──┬──┬───┘
-                │  │  │  └──────────────────┐
-      ┌─────────┘  │  └────────┐            │
-      │            │           │            │
-      ▼            ▼           ▼            ▼
-┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-│   SQL    │ │ SEMANTIC │ │  OMDB    │ │   WEB    │
-│  NODE    │ │   NODE   │ │  NODE    │ │  NODE    │
-└────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘
-     │            │            │            │
-     └────────────┴────────────┴────────────┘
-                  │
-                  ▼
-         ┌────────────────┐
-         │  SYNTHESIZER   │ ← Combines all results
-         │   (GPT-4o)     │   Generates natural response
-         └────────┬───────┘
-                  │
-                  ▼
-┌───────────────────────────────────────────┐
-│         FINAL RESPONSE + SOURCES          │
-└───────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    START(["**START**"]) --> planner["**Planner Node**<br>Analyze query<br>Choose the tools<br>Generate the queries"]
+    planner -- "needs_sql=true" --> sql["**SQL Node**<br>Execute SQL query"]
+    planner -- "needs_semantic=true" --> semantic["**Semantic Node**<br>Vector search"]
+    planner -- "needs_omdb=true" --> omdb["**OMDB Node**<br>Fetch movie data"]
+    planner -- "needs_web=true" --> web["**Web Node**<br>DuckDuckGo search"]
+    planner -- "All flags=false" --> synthesize["**Synthesizer Node**<br>Generate response"]
+    sql --> synthesize
+    semantic --> synthesize
+    omdb --> synthesize
+    web --> synthesize
+    synthesize --> END(["**END**"])
 ```
 
 ## Project Structure
@@ -299,35 +276,6 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
   - Workflow execution and streaming
 
 ---
-
-## Workflow
-
-```
-User Question
-     │
-     ▼
-[Planner Node]
-  Analyzes: question + history
-  Decides: which tools needed
-  Outputs: needs_sql, needs_semantic, needs_omdb, needs_web
-     │
-     ▼
-[Conditional Router]
-  Routes to first needed tool
-     │
-     ├─→ [SQL Node] ──────────┐
-     ├─→ [Semantic Node] ─────┤
-     ├─→ [OMDB Node] ─────────┤
-     └─→ [Web Node] ──────────┤
-                              │
-                              ▼
-                    [Synthesizer Node]
-                    Combines all results
-                    Generates response
-                              │
-                              ▼
-                    [Final Response + Sources]
-```
 
 ## Future Improvements
 
