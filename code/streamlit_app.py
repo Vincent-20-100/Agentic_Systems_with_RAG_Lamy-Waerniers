@@ -161,29 +161,29 @@ st.markdown("""
 
     /* Style pour les différents types de statut */
     .status-thinking {
-        border-left-color: #667eea;
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        border-left-color: #d946ef;
+        background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
     }
 
     .status-sql {
-        border-left-color: #2e7d32;
-        background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        border-left-color: #7c3aed;
+        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
     }
 
     .status-semantic {
-        border-left-color: #1565c0;
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left-color: #0ea5e9;
+        background: linear-gradient(135deg, #e0f2fe 0%, #cffafe 100%);
     }
 
     .status-omdb {
-        border-left-color: #e65100;
-        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border-left-color: #a855f7;
+        background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
     }
 
     .status-web {
-        border-left-color: #6a1b9a;
-        background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-    }
+        border-left-color: #6b7280;
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    }        
 
     .status-complete {
         border-left-color: #2e7d32;
@@ -245,7 +245,7 @@ with st.sidebar:
                         # Afficher les tables avec leurs colonnes
                         tables = db_info.get("tables", {})
                         for table_name, table_info in tables.items():
-                            with st.expander(f"📄 {table_name}"):
+                            with st.expander(f"{table_name}"):
                                 row_count = table_info.get("row_count", "?")
                                 st.caption(f"**Lignes:** {row_count}")
 
@@ -253,12 +253,12 @@ with st.sidebar:
                                 for col in table_info.get("columns", []):
                                     col_name = col["name"]
                                     col_type = col["type"]
-                                    pk_icon = "🔑" if col.get("primary_key", False) else "📌"
+                                    pk_icon = "🔑" if col.get("primary_key", False) else ""
                                     st.caption(f"{pk_icon} {col_name} ({col_type})")
 
         with st.expander("#### 🛠️ Outils disponibles", expanded=False):
                 tools = [
-                    ("💾", "Requête SQL", "Interroger directement les bases de données"),
+                    ("🗄️", "Requête SQL", "Interroger directement les bases de données"),
                     ("🔍", "Recherche sémantique", "Recherche intelligente par similarité (RAG)"),
                     ("🎬", "API OMDB", "Informations sur les films"),
                     ("🌐", "Recherche Web", "Recherche sur internet")
@@ -270,8 +270,8 @@ with st.sidebar:
         st.markdown("#### 💡 Exemples de questions")
         examples = [
             "Combien de genres de films y a-t-il dans nos bases de données ?",
-            "Montre moi l'affiche de Gladiator de Ridley Scott.",
-            "Propose des films d'enquêtes avec ambiance sombre. (semantic search)",
+            "Montre moi l'affiche de  Ex Machina.",
+            "Propose des films d'enquêtes avec une ambiance sombre et une intrigue à suspense.",
         ]
         for idx, example in enumerate(examples, 1):
             st.caption(f"{idx}. {example}")
@@ -433,7 +433,7 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
             elif current == "sql_executed":
                 status.markdown("""
                     <div class="albert-status status-sql">
-                        <div class="albert-status-icon">💾</div>
+                        <div class="albert-status-icon">🗄️</div>
                         <div class="albert-status-text">Albert interroge la base de données SQL<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>

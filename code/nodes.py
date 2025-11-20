@@ -36,20 +36,71 @@ AVAILABLE TOOLS (priority order):
 2. Semantic Search - Find movies by description/themes/plot similarity (vector search)
     → Use when: The query involves plot details, themes, or content-based recommendations
     → Use for: content-based search, "movies like X", plot descriptions, themes
-     IMPORTANT: Semantic query MUST be in English!
-    → Two approaches: By KEYWORD Like "romance" or by Full plot sentence like "A detective solving a mysterious murder"
+    → IMPORTANT: Semantic query MUST be in English!
+    → Two approaches: By KEYWORD like "romance" or by Full plot sentence like "A detective solving a mysterious murder"
 3. OMDB API - Detailed info (posters, full plot, actors, awards, ratings)
     → Use for: enriching results with additional info
 4. Web Search - Recent news, trending topics, current events only
     → Use for: "latest", "trending", "news", "today", "this week"
 
+CRITICAL INSTRUCTIONS - SEMANTIC SEARCH DETECTION:
+⚠️ AGGRESSIVELY USE SEMANTIC SEARCH for ANY description-like queries:
+   - "movies about..." / "films with..." / "show me..." + description
+   - "like" / "similar to" / "remind me of" + ANY description
+   - Atmospheric/mood descriptions: "cozy", "dark", "mysterious", "romantic", "intense"
+   - Plot elements: "detective", "revenge", "betrayal", "time travel", "heist"
+   - Vibes/feelings: "emotional", "thrilling", "sad", "uplifting"
+   - ANY natural language description of CONTENT = USE SEMANTIC + SQL
+
+SEMANTIC QUERY GENERATION RULES:
+🎬 When generating semantic_query: TRANSFORM user input into a SHORT MOVIE DESCRIPTION (~150 chars)
+   - Extrapolate from user's intent → write like a plot summary or movie pitch
+   - Examples:
+     User: "dark and mysterious"
+     → Generated: "A dark mystery where secrets unfold in shadowy corners, revealing disturbing truths and psychological tension throughout"
+     
+     User: "like Inception"
+     → Generated: "A mind-bending thriller exploring reality and dreams, featuring complex heists within layers of consciousness with stunning visuals"
+     
+     User: "cozy romance"
+     → Generated: "A warm romantic story set in a charming small town where two people discover love through everyday moments and genuine connection"
+   
+   - Keep it descriptive but concise (aim for 120-180 characters)
+   - Include mood, plot elements, and atmosphere
+   - Use present tense, active language
+   - Make it sound like a natural movie description that would be in the database
+
+🔑 STRATEGY - Combine tools when possible:
+   - Use SQL + SEMANTIC together for: "action movies from 2020" → SQL filters year/genre, SEMANTIC finds action vibes
+   - Use SQL + SEMANTIC together for: "movies like Inception but recent" → SQL filters years, SEMANTIC finds plot similarity
+   - Use SEMANTIC alone for: purely descriptive queries with no structural filters
+   - Use SQL alone for: pure aggregations, counts, schema queries, year/rating filters without description
+
+EXAMPLES:
+Q: "What are the best rated action movies from 2020?"
+→ needs_sql=True (filter year, genre, rating) + needs_semantic=False
+
+Q: "Show me movies with a cozy, mysterious atmosphere"
+→ needs_semantic=True (description detection!) + needs_sql=False
+
+Q: "I want something dark and atmospheric like Blade Runner"
+→ needs_semantic=True (description + "like") + needs_sql=False
+
+Q: "Find me sci-fi movies from 2015-2020 with emotional depth"
+→ needs_sql=True (year filter, genre) + needs_semantic=True (emotional depth description)
+
+Q: "How many movies are in each genre?"
+→ needs_sql=True (aggregation) + needs_semantic=False
+
+Q: "Movies about a heist with twists"
+→ needs_semantic=True (plot description) + needs_sql=False
+
 INSTRUCTIONS:
 - Resolve references from history (e.g., "that movie" → actual movie name)
 - If question is about DATABASE SCHEMA/STRUCTURE/TABLES, set needs_sql=False (schema is already in catalog)
-- Always prefer SQL first if question is about movie/series data
-- Use Semantic Search for: plot descriptions, themes, "movies like X", content-based recommendations
-- Use OMDB if user asks for: poster, detailed plot, actors, awards
-- Use Web only for: "latest", "trending", "news", "today", "this week"
+- DEFAULT: Assume SQL is needed unless ONLY description/content-based
+- DESCRIPTION KEYWORDS trigger semantic: "about", "like", "similar", "atmosphere", "vibe", "mood", "feels", "reminds me", any adjective describing content
+- When in doubt between SQL and SEMANTIC: USE BOTH
 - Prepare specific queries for each tool you decide to use
 
 OUTPUT: Structured decision with resolved query and tool flags"""
