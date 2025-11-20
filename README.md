@@ -8,6 +8,32 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.0.2-00ADD8.svg)](https://langchain-ai.github.io/langgraph/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-1.3.4-FF6F61.svg)](https://www.trychroma.com/)
 
+## Installation & Démarrage 🚀
+
+### Étape 1 : Cloner le projet
+
+### Étape 2 : Créer un environnement virtuel
+
+### Étape 3 : Installer les dépendances
+requirements.txt
+
+### Étape 4 : Configurer les variables d'environnement
+Créez un fichier `.env` à la racine du projet :
+Ouvrez le fichier `.env` et remplissez les variables nécessaires :
+```env
+OPENAI_API_KEY="your_openai_api_key"
+OMDB_API_KEY="your_omdb_api_key"
+```
+> **⚠️ Important** : Ne committez jamais votre fichier `.env` contenant les clés sensibles. Il doit être ajouté à `.gitignore`.
+
+### Étape 5 : Lancer l'application
+```bash
+streamlit run code/streamlit_app.py
+```
+L'application s'ouvrira automatiquement dans votre navigateur à l'adresse `http://localhost:8501`
+
+---
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
