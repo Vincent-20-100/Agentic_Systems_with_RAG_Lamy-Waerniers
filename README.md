@@ -126,6 +126,9 @@ Access your Langfuse dashboard at [cloud.langfuse.com](https://cloud.langfuse.co
 - Debug errors and track edge cases
 
 All traces are automatically organized by session ID for easy conversation tracking.
+  
+### Langfuse tuto
+[![Regarder la vidéo](https://img.youtube.com/vi/1vO5cZWpwiI/0.jpg)](https://www.youtube.com/watch?v=1vO5cZWpwiI)
 
 ---
 ## Features
