@@ -9,7 +9,7 @@
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-1.3.4-FF6F61.svg)](https://www.trychroma.com/)
 
 
-## Table of Contents 📋
+## Table of Contents
 
 - [Overview](#overview)
 - [Installation](#installation)
@@ -24,7 +24,7 @@
 
 ---
 
-## Overview 🎯
+## Overview
 
 **Albert Query** is an agentic AI system we developed as part of our M1 project at **Albert School** in collaboration with **Mines Paris - PSL**. The system intelligently answers questions about movies and TV series by orchestrating multiple data sources and tools through a LangGraph-based workflow.
 
@@ -47,7 +47,7 @@ Unlike traditional chatbots, Albert Query:
 
 ---
 
-## Installation & Run 🚀
+## Installation
 
 ### Step 1: Clone the repo
 ```bash
@@ -86,7 +86,7 @@ streamlit run code/streamlit_app.py
 The app will open at `http://localhost:8501`
 
 ---
-## Features ✨
+## Features
 
 ### Core Capabilities
 
@@ -127,7 +127,7 @@ The app will open at `http://localhost:8501`
 
 ---
 
-## Architecture 🏗️
+## Architecture
 
 Our system follows an **agentic architecture** using LangGraph to create a stateful, multi-tool workflow:
 
@@ -169,7 +169,7 @@ Our system follows an **agentic architecture** using LangGraph to create a state
 └───────────────────────────────────────────┘
 ```
 
-## Project Structure 📁
+## Project Structure
 
 ```
 Agentic_Systems_with_RAG_Lamy-Waerniers/
@@ -213,7 +213,7 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 └── README.md                                # This file
 ```
 
-### Architecture Breakdown 🏛️
+### Architecture Breakdown
 
 #### Core Modules:
 
@@ -258,7 +258,7 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 
 ---
 
-## Workflow 🔄
+## Workflow
 
 ```
 User Question
@@ -287,7 +287,7 @@ User Question
                     [Final Response + Sources]
 ```
 
-## Future Improvements 🚧
+## Future Improvements
 
 We've identified several areas for optimization and enhancement. Here's our roadmap:
 
@@ -511,7 +511,7 @@ Expected Impact:
 - 📊 Semantic search quality metrics
 
 
-## Contributors 👥
+## Contributors
 
 This project was developed as part of our Master's degree at **Albert School X Mines Paris - PSL**.
 
@@ -524,7 +524,7 @@ This project was developed as part of our Master's degree at **Albert School X M
 
 ---
 
-## License 📄
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
