@@ -3,31 +3,37 @@ OMDB API tool - async wrapper for movie metadata
 """
 import asyncio
 import json
-import os
-import importlib.util
+import requests
+from langchain_core.tools import tool
+from config import OMDB_API_KEY, OMDB_BASE_URL
 
-# Import from code/tools.py module file (not code/tools/ package)
-# Due to naming conflict, we use importlib to load the specific file
-_tools_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools.py")
-_spec = importlib.util.spec_from_file_location("_code_tools_module", _tools_file_path)
-_tools_module = importlib.util.module_from_spec(_spec)
 
-# We need to setup the module's environment before loading
-# so it can find its imports (config, etc.)
-import sys
-_parent_dir = os.path.dirname(os.path.dirname(__file__))
-if _parent_dir not in sys.path:
-    sys.path.insert(0, _parent_dir)
+@tool
+def omdb_api(by: str = "title", t: str = None, plot: str = "full") -> str:
+    """Query OMDb API"""
+    if not OMDB_API_KEY:
+        return json.dumps({"error": "OMDB_API_KEY missing"})
 
-_spec.loader.exec_module(_tools_module)
-sync_omdb_tool = _tools_module.omdb_api
+    params = {"apikey": OMDB_API_KEY, "plot": plot}
+
+    if by == "title" and t:
+        params["t"] = t
+    else:
+        return json.dumps({"error": "Title required"})
+
+    try:
+        response = requests.get(OMDB_BASE_URL, params=params, timeout=10)
+        response.raise_for_status()
+        return response.text
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 
 async def execute_omdb_async(title: str) -> dict:
     """Execute OMDB API call asynchronously"""
     try:
         result_json = await asyncio.to_thread(
-            sync_omdb_tool.invoke,
+            omdb_api.invoke,
             {
                 "by": "title",
                 "t": title,

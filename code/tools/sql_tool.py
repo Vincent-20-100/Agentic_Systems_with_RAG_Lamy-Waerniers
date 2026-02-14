@@ -3,24 +3,36 @@ SQL tool - async wrapper for database queries
 """
 import asyncio
 import json
-import os
-import importlib.util
+import sqlite3
+from langchain_core.tools import tool
 
-# Import from code/tools.py module file (not code/tools/ package)
-# Due to naming conflict, we use importlib to load the specific file
-_tools_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools.py")
-_spec = importlib.util.spec_from_file_location("_code_tools_module", _tools_file_path)
-_tools_module = importlib.util.module_from_spec(_spec)
 
-# We need to setup the module's environment before loading
-# so it can find its imports (config, etc.)
-import sys
-_parent_dir = os.path.dirname(os.path.dirname(__file__))
-if _parent_dir not in sys.path:
-    sys.path.insert(0, _parent_dir)
+@tool
+def execute_sql_query(query: str, db_name: str, state_catalog: dict) -> str:
+    """Execute SQL query"""
+    catalog = state_catalog
 
-_spec.loader.exec_module(_tools_module)
-sync_sql_tool = _tools_module.execute_sql_query
+    if db_name not in catalog["databases"]:
+        return json.dumps({"error": f"Database '{db_name}' not found"})
+
+    db_info = catalog["databases"][db_name]
+
+    if "error" in db_info:
+        return json.dumps({"error": db_info["error"]})
+
+    db_path = db_info["full_path"]
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        result = [dict(zip(columns, row)) for row in rows]
+        conn.close()
+        return json.dumps(result, indent=2, default=str)
+    except Exception as e:
+        return json.dumps({"error": f"SQL Error: {str(e)}"})
 
 
 async def execute_sql_async(query: str, db_name: str, catalog: dict) -> dict:
@@ -35,7 +47,7 @@ async def execute_sql_async(query: str, db_name: str, catalog: dict) -> dict:
     try:
         # Run sync tool in thread pool
         result_json = await asyncio.to_thread(
-            sync_sql_tool.invoke,
+            execute_sql_query.invoke,
             {
                 "query": query,
                 "db_name": db_name,

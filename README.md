@@ -32,7 +32,9 @@
 ### What Makes It Special?
 
 Unlike traditional chatbots, Albert Query:
-- **Plans before acting** - Analyzes each question to determine which tools are needed
+- **Agentic architecture** - Planner→Executor→Evaluator→Synthesizer workflow with self-correction
+- **Self-correcting loops** - Evaluator can request additional data if initial results insufficient (max 2 iterations)
+- **Parallel execution** - All selected tools run simultaneously for faster responses
 - **Multi-source intelligence** - Combines SQL databases, vector search, external APIs, and web search
 - **Semantic understanding** - Uses OpenAI embeddings to find movies by plot similarity
 - **Source attribution** - Always shows where information comes from
@@ -171,22 +173,53 @@ All traces are automatically organized by session ID for easy conversation track
 
 ## Architecture
 
-Our system follows an **agentic architecture** using LangGraph to create a stateful, multi-tool workflow:
+### Agentic Workflow Pattern
 
-```mermaid
-flowchart TB
-    START(["**START**"]) --> planner["**Planner Node**<br>Analyze query<br>Choose the tools<br>Generate the queries"]
-    planner -- "needs_sql=true" --> sql["**SQL Node**<br>Execute SQL query"]
-    planner -- "needs_semantic=true" --> semantic["**Semantic Node**<br>Vector search"]
-    planner -- "needs_omdb=true" --> omdb["**OMDB Node**<br>Fetch movie data"]
-    planner -- "needs_web=true" --> web["**Web Node**<br>DuckDuckGo search"]
-    planner -- "All flags=false" --> synthesize["**Synthesizer Node**<br>Generate response"]
-    sql --> synthesize
-    semantic --> synthesize
-    omdb --> synthesize
-    web --> synthesize
-    synthesize --> END(["**END**"])
+Albert Query uses a **Planner-Executor-Evaluator-Synthesizer** pattern with self-correction capabilities:
+
 ```
+┌─────────────────────────────────────────────────┐
+│                    START                        │
+└──────────────────┬──────────────────────────────┘
+                   ↓
+         ┌─────────────────┐
+         │    PLANNER      │  ← Analyzes query, selects tools
+         └────────┬────────┘
+                  ↓
+         ┌─────────────────┐
+         │    EXECUTOR     │  ← Runs tools in parallel
+         └────────┬────────┘
+                  ↓
+         ┌─────────────────┐
+         │   EVALUATOR     │  ← Assesses data sufficiency
+         └────────┬────────┘
+                  ↓
+          [Data Sufficient?]
+           ↙              ↘
+    [No - Replan]    [Yes - Continue]
+           ↓                ↓
+    (back to Planner)  ┌─────────────────┐
+    (max 2 iterations) │  SYNTHESIZER    │  ← Generates answer
+                       └────────┬────────┘
+                                ↓
+                              END
+```
+
+### Key Features
+
+- **Planner**: LLM-powered tool selection based on query analysis
+- **Executor**: Parallel tool execution using asyncio for speed
+- **Evaluator**: Assesses if data is sufficient; can trigger replanning
+- **Synthesizer**: Natural language response generation with source attribution
+- **Loop Safety**: Maximum 2 iterations prevents infinite loops
+- **State Management**: LangGraph checkpointing maintains conversation context
+
+### Available Tools
+
+1. **SQL Database** - Structured queries on 8,000+ movies/shows (filters, aggregations)
+2. **Semantic Search** - Vector similarity search for plot-based discovery
+3. **OMDB API** - Enriched metadata (cast, ratings, detailed plots)
+4. **Web Search** - Current information and trending topics
 
 ## Project Structure
 
