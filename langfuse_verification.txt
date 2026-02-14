@@ -1,6 +1,0 @@
-✓ Langfuse integration verified:
-- CallbackHandler imported from langfuse.langchain
-- Handler instance created: langfuse_handler
-- Passed to LangGraph via config={'callbacks': [langfuse_handler]}
-- LangGraph supports LangChain callbacks (official documentation)
-- No changes needed for new workflow
