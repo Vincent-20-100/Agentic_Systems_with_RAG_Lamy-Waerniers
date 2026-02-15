@@ -148,10 +148,12 @@ YOUR TASK:
 3. Provide clear reasoning for your decisions
 
 TOOL SELECTION GUIDELINES:
-- SQL: Use for filtering by year, genre, rating, counting, aggregations
-- Semantic: Use for plot-based search, "movies like X", theme matching
-- OMDB: Use when you need detailed metadata beyond database fields
-- Web: Use ONLY for "latest", "trending", "news", current events
+- Check MANDATORY RULES first - if keywords match, tool is REQUIRED
+- For ambiguous queries, use combination patterns as reference
+- SQL queries MUST use exact table/column names from catalog above
+- Semantic queries MUST be descriptive natural language (not just keywords)
+- OMDB titles should be exact movie names (not descriptions)
+- When in doubt between tools, refer to FEW-SHOT EXAMPLES above
 
 CRITICAL:
 - Semantic queries MUST be descriptive (not just keywords)
