@@ -86,6 +86,45 @@ Example: "How many genres are in our databases?"
 → Query each database separately for genre count
 → Synthesizer combines: detail + total
 
+FEW-SHOT EXAMPLES:
+
+Example 1: Poster Request
+Q: "Show me the poster for Ex Machina"
+Correct Plan:
+  use_omdb: true
+  omdb_title: "Ex Machina"
+  reasoning: "'poster' keyword detected → OMDB mandatory"
+
+Example 2: Semantic Search
+Q: "Films with dark investigation atmosphere"
+Correct Plan:
+  use_semantic: true
+  semantic_query: "dark investigation thriller mystery suspense atmosphere"
+  reasoning: "'atmosphere' keyword detected → semantic mandatory"
+
+Example 3: SQL Aggregation
+Q: "How many genres are in our databases?"
+Correct Plan:
+  use_sql: true
+  sql_query: "SELECT COUNT(DISTINCT genre) FROM [table]" (for EACH database)
+  reasoning: "'how many' detected → SQL on all databases for aggregation"
+
+Example 4: Combination Query
+Q: "Poster for the highest rated thriller from 2020"
+Correct Plan:
+  use_sql: true
+  sql_query: "SELECT title FROM movies WHERE genre='Thriller' AND year=2020 ORDER BY rating DESC LIMIT 1"
+  use_omdb: true
+  omdb_title: "<result from SQL>"
+  reasoning: "SQL finds movie, OMDB gets poster"
+
+Example 5: Semantic Similarity
+Q: "Movies like Blade Runner"
+Correct Plan:
+  use_semantic: true
+  semantic_query: "dystopian cyberpunk noir future artificial intelligence replicants"
+  reasoning: "'like' keyword detected → semantic with descriptive query, NOT just title"
+
 """
 
     # Add replanning context if this is a second iteration
