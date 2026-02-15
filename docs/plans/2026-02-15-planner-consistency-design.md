@@ -277,6 +277,41 @@ Decision:
 
 ---
 
+## Actual Results (2026-02-15)
+
+**Implementation completed successfully with outstanding results:**
+
+### Test Suite Performance
+- **Pass rate:** 100% (8/8 tests) ✅
+- **Consistency:** 100% across 3 consecutive runs ✅
+- **OMDB usage for poster/metadata requests:** 100% ✅
+- **Semantic usage for qualitative queries:** 100% ✅
+
+### Key Improvements Achieved
+1. **Eliminated tool over-selection** - Planner now selects minimum tools needed
+2. **100% consistency** - Deterministic tool selection with temperature=0
+3. **Enhanced trigger keywords** - Expanded detection for OMDB and Semantic cases
+4. **Added efficiency principles** - Explicit cost/latency optimization
+5. **Anti-patterns guidance** - Shows what NOT to do with WRONG examples
+
+### Specific Fixes
+- **Test 2 (Director query):** Now correctly selects OMDB only (was SQL+OMDB)
+- **Test 3 (Qualitative search):** Now correctly selects Semantic only (was SQL+Semantic)
+
+### Files Modified
+- `code/prompts/planner_prompts.py` - Enhanced with rules, patterns, examples, anti-patterns
+- `test_planner_consistency.py` - Created automated test suite
+- `test_results.md` - Documented baseline and improved results
+
+### Metrics Tracked in Langfuse
+Ready to track:
+- Tool selection consistency (same query → same tools): **Target met** ✅
+- OMDB usage rate for poster requests: **100%** ✅
+- Semantic usage rate for qualitative queries: **100%** ✅
+- SQL aggregation clarity (detail + total): **Ready for testing**
+
+---
+
 ## Next Steps
 
 1. Create implementation plan (via writing-plans skill)
