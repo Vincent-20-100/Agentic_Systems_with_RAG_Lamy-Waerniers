@@ -73,3 +73,13 @@ async def executor_node(state: AgentState) -> dict:
         "previous_results": all_results,
         "sources_used": sources
     }
+
+
+def executor_node_sync(state: AgentState) -> dict:
+    """
+    Synchronous wrapper for executor_node
+
+    LangGraph requires synchronous functions by default,
+    so this wrapper runs the async executor_node using asyncio.run()
+    """
+    return asyncio.run(executor_node(state))
