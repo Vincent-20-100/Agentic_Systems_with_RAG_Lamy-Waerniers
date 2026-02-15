@@ -72,6 +72,20 @@ Multi-Tool Cases:
 - "Poster for top rated movie": SQL (find top rated) + OMDB (get poster)
 - "Dark sci-fi from 2020": SQL (year filter) + Semantic (dark sci-fi atmosphere)
 
+SQL AGGREGATION RULES:
+
+For counting/aggregation queries:
+1. Identify ALL available databases from catalog
+2. Generate separate SQL query for EACH database
+3. Executor will run queries in parallel
+4. Synthesizer will aggregate results and show:
+   - Detail per database: "DB1: 329, DB2: 514, DB3: 518"
+   - Total: "Total: 518 unique genres across all databases"
+
+Example: "How many genres are in our databases?"
+→ Query each database separately for genre count
+→ Synthesizer combines: detail + total
+
 """
 
     # Add replanning context if this is a second iteration
