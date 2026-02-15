@@ -61,6 +61,17 @@ MANDATORY TOOL SELECTION RULES (check in this order):
    Action: use_web=True
    Reason: Rarely needed for movie databases
 
+TOOL COMBINATION PATTERNS:
+
+Single Tool Cases:
+- Poster request: OMDB only
+- "How many" queries: SQL only (all databases)
+- Qualitative search: Semantic only
+
+Multi-Tool Cases:
+- "Poster for top rated movie": SQL (find top rated) + OMDB (get poster)
+- "Dark sci-fi from 2020": SQL (year filter) + Semantic (dark sci-fi atmosphere)
+
 """
 
     # Add replanning context if this is a second iteration
