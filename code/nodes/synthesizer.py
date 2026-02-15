@@ -2,9 +2,9 @@
 Synthesizer node - generate final natural language response
 """
 from langchain_core.messages import AIMessage
-from code.core.state import AgentState
-from code.prompts.synthesizer_prompts import build_synthesizer_prompt
-from code.config import llm
+from core.state import AgentState
+from prompts.synthesizer_prompts import build_synthesizer_prompt
+from config import llm
 
 
 def synthesizer_node(state: AgentState) -> dict:

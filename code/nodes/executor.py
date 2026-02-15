@@ -2,12 +2,12 @@
 Executor node - parallel tool execution
 """
 import asyncio
-from code.core.state import AgentState
-from code.core.models import ExecutionPlan
-from code.tools.sql_tool import execute_sql_async
-from code.tools.semantic_tool import execute_semantic_async
-from code.tools.omdb_tool import execute_omdb_async
-from code.tools.web_tool import execute_web_async
+from core.state import AgentState
+from core.models import ExecutionPlan
+from tools.sql_tool import execute_sql_async
+from tools.semantic_tool import execute_semantic_async
+from tools.omdb_tool import execute_omdb_async
+from tools.web_tool import execute_web_async
 
 
 async def executor_node(state: AgentState) -> dict:

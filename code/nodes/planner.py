@@ -1,10 +1,10 @@
 """
 Planner node - LLM-powered tool selection and query preparation
 """
-from code.core.state import AgentState
-from code.core.models import ExecutionPlan
-from code.prompts.planner_prompts import build_planner_prompt
-from code.config import llm
+from core.state import AgentState
+from core.models import ExecutionPlan
+from prompts.planner_prompts import build_planner_prompt
+from config import llm
 
 
 def planner_node(state: AgentState) -> dict:

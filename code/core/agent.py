@@ -4,11 +4,11 @@ LangGraph workflow construction for agentic system
 import streamlit as st
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
-from code.core.state import AgentState
-from code.nodes.planner import planner_node
-from code.nodes.executor import executor_node
-from code.nodes.evaluator import evaluator_node
-from code.nodes.synthesizer import synthesizer_node
+from core.state import AgentState
+from nodes.planner import planner_node
+from nodes.executor import executor_node
+from nodes.evaluator import evaluator_node
+from nodes.synthesizer import synthesizer_node
 
 
 def route_after_evaluator(state: AgentState) -> str:

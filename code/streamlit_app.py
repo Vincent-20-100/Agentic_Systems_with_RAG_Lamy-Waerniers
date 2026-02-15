@@ -3,7 +3,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 import time
 
 from utils import build_db_catalog
-from code.core.agent import app
+from core.agent import app
 from config import OPENAI_API_KEY, DB_FOLDER_PATH
 from langfuse.langchain import CallbackHandler
  
