@@ -243,7 +243,7 @@ Albert Query implements an agentic RAG system using LangGraph, structured as a s
    - **Input**: Execution results + original question
    - **Output**: `EvaluationResult` with sufficiency assessment
    - **Logic**: Determines if results are sufficient or if replanning is needed
-   - **Self-Correction**: Can trigger up to 1 replan iteration (max 2 total cycles)
+   - **Self-Correction**: Can trigger 1 replan if needed (max 2 execution cycles total)
 
 4. **Synthesizer Node (LLM-Powered)**
    - **Input**: All tool results + original question
@@ -305,8 +305,8 @@ The Planner uses **mandatory keyword-based rules** for deterministic tool select
    ```json
    {
      "data_sufficient": true,
-     "quality_score": 8.5,
-     "reasoning": "SQL provided time/genre filter, Semantic provided atmospheric matches, sufficient overlap for quality answer"
+     "confidence": 0.85,
+     "reasoning": "SQL provided time/genre filter, Semantic provided atmospheric matches, high confidence in result quality"
    }
    ```
 
@@ -318,7 +318,7 @@ The Planner uses **mandatory keyword-based rules** for deterministic tool select
 
 **Langfuse Trace Example:**
 - Total latency: 4.2s (Planner 1.1s, Executor 2.3s, Evaluator 0.4s, Synthesizer 0.8s)
-- Token usage: 450 input, 120 output (~$0.002 cost)
+- Token usage: 450 input, 120 output (~$0.002 cost (GPT-4o-mini))
 - Tools: SQL + Semantic (no replanning needed)
 
 ## Project Structure
