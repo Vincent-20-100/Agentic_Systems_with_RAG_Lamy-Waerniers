@@ -281,7 +281,9 @@ with st.sidebar:
             "Propose des films d'enquêtes avec une ambiance sombre et une intrigue à suspense.",
         ]
         for idx, example in enumerate(examples, 1):
-            st.caption(f"{idx}. {example}")
+            if st.button(f"💬 {example}", key=f"example_{idx}", use_container_width=True):
+                st.session_state.pending_query = example
+                st.rerun()
 
 # =================================
 # Chat Display
@@ -382,7 +384,15 @@ with chat_container:
 # =================================
 # User Input & Processing
 # =================================
-if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
+
+# Check for pending query from example buttons
+if "pending_query" in st.session_state:
+    prompt = st.session_state.pending_query
+    del st.session_state.pending_query
+else:
+    prompt = st.chat_input("Pose-moi une question sur tes données... 💬")
+
+if prompt:
 
     # Ajouter le message utilisateur
     st.session_state.chat_messages.append({"role": "user", "content": prompt})
