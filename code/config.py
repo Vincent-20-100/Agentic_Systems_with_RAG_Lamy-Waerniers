@@ -29,6 +29,7 @@ def load_api_keys():
         omdb_key         = st.secrets.get("OMDB_API_KEY")
         langfuse_secret  = st.secrets.get("LANGFUSE_SECRET_KEY")
         langfuse_public  = st.secrets.get("LANGFUSE_PUBLIC_KEY")
+        langfuse_host    = st.secrets.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
     else:
         # Local development
         from dotenv import load_dotenv
@@ -37,12 +38,13 @@ def load_api_keys():
         omdb_key         = os.getenv("OMDB_API_KEY")
         langfuse_secret  = os.getenv("LANGFUSE_SECRET_KEY")
         langfuse_public  = os.getenv("LANGFUSE_PUBLIC_KEY")
+        langfuse_host    = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
-    return openai_key, omdb_key, langfuse_secret, langfuse_public
+    return openai_key, omdb_key, langfuse_secret, langfuse_public, langfuse_host
 
 
 # Load keys at import time
-OPENAI_API_KEY, OMDB_API_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY = load_api_keys()
+OPENAI_API_KEY, OMDB_API_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, LANGFUSE_HOST = load_api_keys()
 
 # ==================================
 # ========== VALIDATION ============

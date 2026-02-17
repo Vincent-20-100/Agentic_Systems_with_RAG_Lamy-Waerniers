@@ -1,12 +1,19 @@
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 import time
+import os
 
 from utils import build_db_catalog
-from agent import app
-from config import OPENAI_API_KEY, DB_FOLDER_PATH
+from core.agent import app
+from config import OPENAI_API_KEY, DB_FOLDER_PATH, LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, LANGFUSE_HOST
+
+# Set Langfuse environment variables explicitly
+os.environ["LANGFUSE_SECRET_KEY"] = LANGFUSE_SECRET_KEY
+os.environ["LANGFUSE_PUBLIC_KEY"] = LANGFUSE_PUBLIC_KEY
+os.environ["LANGFUSE_HOST"] = LANGFUSE_HOST
+
+# Now import and create CallbackHandler (it will read from environment variables)
 from langfuse.langchain import CallbackHandler
- 
 langfuse_handler = CallbackHandler()
 
 # =================================
@@ -274,7 +281,9 @@ with st.sidebar:
             "Propose des films d'enquêtes avec une ambiance sombre et une intrigue à suspense.",
         ]
         for idx, example in enumerate(examples, 1):
-            st.caption(f"{idx}. {example}")
+            if st.button(f"💬 {example}", key=f"example_{idx}", use_container_width=True):
+                st.session_state.pending_query = example
+                st.rerun()
 
 # =================================
 # Chat Display
@@ -375,7 +384,15 @@ with chat_container:
 # =================================
 # User Input & Processing
 # =================================
-if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
+
+# Check for pending query from example buttons
+if "pending_query" in st.session_state:
+    prompt = st.session_state.pending_query
+    del st.session_state.pending_query
+else:
+    prompt = st.chat_input("Pose-moi une question sur tes données... 💬")
+
+if prompt:
 
     # Ajouter le message utilisateur
     st.session_state.chat_messages.append({"role": "user", "content": prompt})
@@ -395,23 +412,18 @@ if prompt := st.chat_input("Pose-moi une question sur tes données... 💬"):
             "messages": st.session_state.agent_messages,
             "db_catalog": st.session_state.db_catalog,
             "original_question": prompt,
-            "resolved_query": "",
-            "planning_reasoning": "",
-            "sql_query": "",
-            "semantic_query": "",
-            "omdb_query": "",
-            "web_query": "",
-            "needs_sql": False,
-            "needs_semantic": False,
-            "needs_omdb": False,
-            "needs_web": False,
-            "sql_result": "[]",
-            "semantic_result": "[]",
-            "omdb_result": "{}",
-            "web_result": "{}",
+            "iteration_count": 0,
+            "max_iterations": 2,
+            "execution_plan": {},
+            "tool_results": {},
+            "evaluator_decision": "",
+            "evaluator_reasoning": "",
+            "replan_instructions": "",
+            "evaluator_confidence": 0.0,
+            "previous_plans": [],
+            "previous_results": {},
             "sources_used": [],
-            "sources_detailed": [],
-            "current_step": ""
+            "sources_detailed": []
         }
 
         config = {"thread_id": st.session_state.thread_id,

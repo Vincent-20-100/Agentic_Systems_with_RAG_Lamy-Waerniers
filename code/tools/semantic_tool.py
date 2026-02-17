@@ -1,77 +1,14 @@
-# =================================
-# ============ IMPORTS ============
-# =================================
-
-import os
+"""
+Semantic search tool - async wrapper for vector search
+"""
+import asyncio
 import json
-import sqlite3
-import requests
-from langchain_core.tools import tool
-from langchain_community.tools import DuckDuckGoSearchResults
+import os
 import chromadb
 from chromadb.utils import embedding_functions
-from config import OPENAI_API_KEY, OMDB_API_KEY, OMDB_BASE_URL, CHROMA_PATH
+from langchain_core.tools import tool
+from config import OPENAI_API_KEY, CHROMA_PATH
 
-
-# =================================
-# ============= TOOLS =============
-# =================================
-
-@tool
-def execute_sql_query(query: str, db_name: str, state_catalog: dict) -> str:
-    """Execute SQL query"""
-    catalog = state_catalog
-    
-    if db_name not in catalog["databases"]:
-        return json.dumps({"error": f"Database '{db_name}' not found"})
-    
-    db_info = catalog["databases"][db_name]
-    
-    if "error" in db_info:
-        return json.dumps({"error": db_info["error"]})
-    
-    db_path = db_info["full_path"]
-    
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        result = [dict(zip(columns, row)) for row in rows]
-        conn.close()
-        return json.dumps(result, indent=2, default=str)
-    except Exception as e:
-        return json.dumps({"error": f"SQL Error: {str(e)}"})
-
-@tool
-def web_search(query: str, num_results: int = 5) -> str:
-    """Web search via DuckDuckGo"""
-    try:
-        search = DuckDuckGoSearchResults(num_results=num_results)
-        return search.run(query)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
-
-@tool
-def omdb_api(by: str = "title", t: str = None, plot: str = "full") -> str:
-    """Query OMDb API"""
-    if not OMDB_API_KEY:
-        return json.dumps({"error": "OMDB_API_KEY missing"})
-    
-    params = {"apikey": OMDB_API_KEY, "plot": plot}
-    
-    if by == "title" and t:
-        params["t"] = t
-    else:
-        return json.dumps({"error": "Title required"})
-    
-    try:
-        response = requests.get(OMDB_BASE_URL, params=params, timeout=10)
-        response.raise_for_status()
-        return response.text
-    except Exception as e:
-        return json.dumps({"error": str(e)})
 
 @tool
 def semantic_search(query: str, n_results: int = 5, table_filter: str = None) -> str:
@@ -140,3 +77,39 @@ def semantic_search(query: str, n_results: int = 5, table_filter: str = None) ->
 
     except Exception as e:
         return json.dumps({"error": f"Semantic search error: {str(e)}"})
+
+
+async def execute_semantic_async(query: str, n_results: int = 5) -> dict:
+    """
+    Execute semantic search asynchronously
+
+    Returns dict with results or error
+    """
+    try:
+        # Run sync tool in thread pool
+        result_json = await asyncio.to_thread(
+            semantic_search.invoke,
+            {
+                "query": query,
+                "n_results": n_results
+            }
+        )
+
+        # Parse JSON result
+        result = json.loads(result_json)
+
+        if isinstance(result, dict) and "error" in result:
+            return {
+                "results": [],
+                "error": result["error"]
+            }
+
+        return {
+            "results": result if isinstance(result, list) else [],
+            "error": None
+        }
+    except Exception as e:
+        return {
+            "results": [],
+            "error": f"Semantic search failed: {str(e)}"
+        }

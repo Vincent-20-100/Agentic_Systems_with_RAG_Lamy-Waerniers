@@ -11,17 +11,58 @@
 
 ## Table of Contents
 
+- [Quick Start](#-quick-start)
 - [Overview](#overview)
 - [Installation](#installation)
-- [Monitoring with Langfuse](#monitoring-with-langfuse)
+- [Monitoring with Langfuse](#-monitoring-with-langfuse)
 - [Features](#features)
-- [Architecture](#architecture)
+- [Architecture & Technical Details](#-architecture--technical-details)
 - [Project Structure](#project-structure)
-- [Components](#components)
-- [Workflow](#workflow)
 - [Future Improvements](#future-improvements)
 - [Contributors](#contributors)
 - [License](#license)
+
+---
+
+## 🚀 Quick Start
+
+### What is Albert Query?
+
+Albert Query is an intelligent movie search assistant that doesn't just match keywords—it understands what you're looking for. Think of it as having a movie expert on your team who can search through databases, understand moods and themes, fetch posters and details, and even check the latest trending films—all in response to natural language questions.
+
+### Key Concepts Explained
+
+**RAG (Retrieval-Augmented Generation):**
+Instead of relying solely on trained knowledge, the AI retrieves real data from databases before answering. This ensures accurate, up-to-date responses grounded in actual movie information.
+
+**Agentic AI:**
+The system doesn't just answer—it plans how to answer, executes the plan using various tools, evaluates if the results are sufficient, and can self-correct by replanning if needed.
+
+**Vector Search (Semantic Search):**
+Find movies by meaning, not just keywords. Ask for "dark investigation atmosphere" and get relevant thrillers, even if those exact words aren't in the database.
+
+**Multi-Tool Orchestration:**
+Different questions need different tools. Albert Query automatically chooses:
+- **SQL Database**: For structured queries (genre filters, year ranges, counts)
+- **Semantic Search**: For qualitative searches (mood, atmosphere, themes)
+- **OMDB API**: For posters, cast, directors, plot details
+- **Web Search**: For trending and latest releases
+
+### Quick Demo
+
+**Example Query:** *"Show me dark sci-fi movies from 2015-2020 with suspenseful atmosphere"*
+
+**What happens:**
+1. **Planner** analyzes the query and decides: Use SQL (for year filter) + Semantic Search (for "dark sci-fi suspenseful")
+2. **Executor** runs both tools in parallel
+3. **Evaluator** checks if results are sufficient
+4. **Synthesizer** combines results into a natural answer with sources
+
+**Result:** You get a curated list of sci-fi films matching both the time period and the atmospheric qualities you described.
+
+### Ready to Try?
+
+Jump to [Installation](#installation) to set up Albert Query, or continue reading for technical details on how the system works.
 
 ---
 
@@ -32,7 +73,9 @@
 ### What Makes It Special?
 
 Unlike traditional chatbots, Albert Query:
-- **Plans before acting** - Analyzes each question to determine which tools are needed
+- **Agentic architecture** - Planner→Executor→Evaluator→Synthesizer workflow with self-correction
+- **Self-correcting loops** - Evaluator can request additional data if initial results insufficient (max 2 iterations)
+- **Parallel execution** - All selected tools run simultaneously for faster responses
 - **Multi-source intelligence** - Combines SQL databases, vector search, external APIs, and web search
 - **Semantic understanding** - Uses OpenAI embeddings to find movies by plot similarity
 - **Source attribution** - Always shows where information comes from
@@ -74,12 +117,12 @@ Create a `.env` file at the root and add:
 ```env
 OPENAI_API_KEY="your_openai_api_key"
 OMDB_API_KEY="your_omdb_api_key"
-LANGFUSE_SECRET_KEY = "your_langfuse_secret_key"
-LANGFUSE_PUBLIC_KEY = "your_langfuse_public_key"
+LANGFUSE_SECRET_KEY="your_langfuse_secret_key"
+LANGFUSE_PUBLIC_KEY="your_langfuse_public_key"
 ```
 
 ### Step 5: Data files
-You can use the jupyter notebooks (code/notebooks) to create the SQL and the cevtor database using the .csv files.
+You can use the jupyter notebooks (code/notebooks) to create the SQL and the vector database using the .csv files.
 
 **OR**
 
@@ -94,9 +137,64 @@ The app will open at `http://localhost:8501`
 
 ---
 
-## Monitoring with Langfuse
+## 🔍 Monitoring with Langfuse
 
-The application includes integrated monitoring and observability through [Langfuse](https://langfuse.com/), allowing you to track and analyze LLM interactions in real-time.
+### What is Langfuse?
+
+Langfuse is an observability platform for LLM applications that tracks every step of the AI workflow. It helps you understand what's happening under the hood, identify issues, and optimize performance.
+
+### Why Use It?
+
+- **Debugging**: See which tools were selected and why the Planner made specific decisions
+- **Cost Tracking**: Monitor OpenAI API usage per query to control spending
+- **Performance**: Measure latency of each node (Planner, Executor, Evaluator, Synthesizer)
+- **Quality**: Identify wrong tool choices or insufficient results that trigger replanning
+
+### What You See in Langfuse
+
+When you run a query, Langfuse captures:
+
+- **Complete Traces**: Full workflow from Planner → Executor → Evaluator → Synthesizer
+- **Token Usage**: Input/output tokens per LLM call (Planner, Evaluator, Synthesizer)
+- **Execution Time**: Latency breakdown per node
+- **Tool Selection Decisions**: Which tools were chosen and the reasoning
+- **Errors & Edge Cases**: Failed API calls, replanning loops, insufficient data
+
+### Practical Use Cases
+
+1. **Debug Tool Selection**: "Why did it use SQL instead of Semantic Search for this query?"
+   - Check Planner trace → see reasoning field → understand keyword triggers
+
+2. **Optimize Performance**: "Which tool is slowing down the workflow?"
+   - Compare Executor node timings → identify bottleneck (SQL query, API call, etc.)
+
+3. **Quality Assurance**: "Is replanning happening too frequently?"
+   - Filter traces by iteration_count > 1 → analyze what queries trigger replanning
+
+4. **Cost Management**: "Can we optimize prompts to reduce token usage?"
+   - Sum token usage across queries → identify verbose prompts → refine
+   - See the token optimization strategies in the Architecture section for ways to reduce prompt verbosity.
+
+### Example Insights
+
+Here's what Langfuse shows for a typical query:
+
+**Query**: *"Dark sci-fi movies from 2015-2020"*
+
+- **Tools Used**: SQL + Semantic Search ✅
+- **Token Usage**:
+  - Planner: 340 input, 85 output
+  - Synthesizer: 180 input, 95 output
+  - Total: ~$0.002 (GPT-4o-mini)
+- **Execution Time**:
+  - Planner: 1.1s
+  - Executor (parallel): 2.3s (SQL 1.8s, Semantic 2.1s)
+  - Evaluator: 0.4s
+  - Synthesizer: 0.8s
+  - **Total: 4.6s**
+- **Replanning**: None (data sufficient on first attempt)
+
+**Insight**: Semantic search is the bottleneck (2.1s). Could optimize by reducing embedding dimensions or using cached results.
 
 ### Setup
 
@@ -107,28 +205,6 @@ The application includes integrated monitoring and observability through [Langfu
    LANGFUSE_SECRET_KEY="sk-lf-..."
    LANGFUSE_PUBLIC_KEY="pk-lf-..."
    ```
-
-### Features
-
-The Langfuse integration automatically tracks:
-- **LLM calls**: All GPT-4o-mini requests and responses
-- **Token usage**: Input/output token counts per query
-- **Latency**: Response times for each agent node
-- **Conversation traces**: Full workflow execution from planner to synthesizer
-- **Cost estimation**: Automatic cost tracking based on token usage
-
-### Viewing Traces
-
-Access your Langfuse dashboard at [cloud.langfuse.com](https://cloud.langfuse.com) to:
-- View detailed traces of each user query
-- Analyze tool selection patterns (SQL, semantic, OMDB, web)
-- Monitor performance metrics and identify bottlenecks
-- Debug errors and track edge cases
-
-All traces are automatically organized by session ID for easy conversation tracking.
-  
-### Langfuse tuto
-[![Regarder la vidéo](https://img.youtube.com/vi/1vO5cZWpwiI/0.jpg)](https://www.youtube.com/watch?v=1vO5cZWpwiI)
 
 ---
 ## Features
@@ -172,24 +248,154 @@ All traces are automatically organized by session ID for easy conversation track
 
 ---
 
-## Architecture
+## 🏗️ Architecture & Technical Details
 
-Our system follows an **agentic architecture** using LangGraph to create a stateful, multi-tool workflow:
+### How the Agentic Workflow Works
+
+Albert Query implements an agentic RAG system using LangGraph, structured as a state machine with four specialized nodes:
 
 ```mermaid
-flowchart TB
-    START(["**START**"]) --> planner["**Planner Node**<br>Analyze query<br>Choose the tools<br>Generate the queries"]
-    planner -- "needs_sql=true" --> sql["**SQL Node**<br>Execute SQL query"]
-    planner -- "needs_semantic=true" --> semantic["**Semantic Node**<br>Vector search"]
-    planner -- "needs_omdb=true" --> omdb["**OMDB Node**<br>Fetch movie data"]
-    planner -- "needs_web=true" --> web["**Web Node**<br>DuckDuckGo search"]
-    planner -- "All flags=false" --> synthesize["**Synthesizer Node**<br>Generate response"]
-    sql --> synthesize
-    semantic --> synthesize
-    omdb --> synthesize
-    web --> synthesize
-    synthesize --> END(["**END**"])
+graph TB
+    Start([User Question]) --> Planner
+
+    subgraph Planning["🧠 PLANNER NODE (LLM)"]
+        Planner[Analyze Query + History]
+        Planner --> Decision{Tool Selection}
+    end
+
+    Decision -->|Selected Tools| Executor
+
+    subgraph Execution["⚡ EXECUTOR NODE (Parallel)"]
+        Executor[Run Tools Simultaneously]
+        Executor --> SQL[(🗄️ SQL Database<br/>8,000+ movies)]
+        Executor --> Semantic[(🔍 Semantic Search<br/>Vector Embeddings)]
+        Executor --> OMDB[(🎬 OMDB API<br/>Metadata & Posters)]
+        Executor --> Web[(🌐 Web Search<br/>Latest & Trending)]
+    end
+
+    SQL --> Results[Combined Results]
+    Semantic --> Results
+    OMDB --> Results
+    Web --> Results
+
+    Results --> Evaluator
+
+    subgraph Evaluation["✅ EVALUATOR NODE (LLM)"]
+        Evaluator{Data Sufficient?}
+    end
+
+    Evaluator -->|No - Replan| Planner
+    Evaluator -->|Yes| Synthesizer
+
+    subgraph Synthesis["📝 SYNTHESIZER NODE (LLM)"]
+        Synthesizer[Generate Response<br/>+ Sources]
+    end
+
+    Synthesizer --> End([Final Answer])
+
+    Note1[Max 2 execution cycles]
+    Evaluator -.-> Note1
 ```
+
+#### The Four-Node Workflow:
+
+1. **Planner Node (LLM-Powered)**
+   - **Input**: User question + conversation history + database catalog
+   - **Output**: `ExecutionPlan` (structured output via OpenAI function calling)
+   - **Logic**: Analyzes query intent, selects appropriate tools, generates tool-specific parameters
+   - **Key Feature**: Uses mandatory keyword triggers (e.g., "poster" → OMDB, "mood" → Semantic)
+
+2. **Executor Node (Parallel Execution)**
+   - **Input**: `ExecutionPlan` from Planner
+   - **Output**: Combined results from all selected tools
+   - **Logic**: Executes tools in parallel using asyncio for optimal performance
+   - **Tools Available**:
+     - SQL Database (8,000+ movies across multiple SQLite DBs)
+     - Semantic Search (ChromaDB vector store with embeddings)
+     - OMDB API (posters, cast, plot details, awards)
+     - Web Search (latest releases, trending movies)
+
+3. **Evaluator Node (LLM-Powered)**
+   - **Input**: Execution results + original question
+   - **Output**: `EvaluationResult` with sufficiency assessment
+   - **Logic**: Determines if results are sufficient or if replanning is needed
+   - **Self-Correction**: Can trigger 1 replan if needed (max 2 execution cycles total)
+
+4. **Synthesizer Node (LLM-Powered)**
+   - **Input**: All tool results + original question
+   - **Output**: Natural language response with cited sources
+   - **Logic**: Combines information from multiple sources into a coherent answer
+   - **Key Feature**: Always cites sources (database names, OMDB, web search)
+
+### Tool Selection Logic
+
+The Planner uses **mandatory keyword-based rules** for deterministic tool selection:
+
+**Mandatory Rules:**
+- **Poster/Image requests** → Always OMDB (databases don't store images)
+  - Keywords: "poster", "affiche", "image", "cover", "artwork"
+
+- **Qualitative searches** → Always Semantic Search (vector similarity)
+  - Keywords: "mood", "atmosphere", "theme", "like", "similar", "vibe"
+
+- **Structured queries** → SQL Database (filters, counts, aggregations)
+  - Keywords: "how many", "count", "genre", "year", "rating", "top N"
+
+- **Current events** → Web Search (rarely needed for movies)
+  - Keywords: "latest", "trending", "news", "2026"
+
+**Planner Decision Examples:**
+
+| Query | Selected Tools | Reasoning |
+|-------|---------------|-----------|
+| "Show me the poster for Ex Machina" | OMDB only | "poster" keyword → mandatory OMDB |
+| "Dark investigation movies" | Semantic only | "Dark investigation" = qualitative search |
+| "How many genres in database?" | SQL only (all DBs) | "How many" → SQL aggregation across all DBs |
+| "Poster for top thriller" | SQL + OMDB | SQL finds top thriller, OMDB fetches poster |
+| "Dark sci-fi from 2020" | SQL + Semantic | SQL filters year, Semantic finds "dark sci-fi" vibe |
+
+### Example Query Walkthrough
+
+**Query:** *"Show me dark sci-fi movies from 2015-2020 with suspenseful atmosphere"*
+
+**Step-by-Step Execution:**
+
+1. **Planner Analysis** (Temperature=0 for consistency)
+   ```json
+   {
+     "use_sql": true,
+     "sql_database": "ALL",
+     "sql_query": "SELECT title, year, rating FROM movies WHERE genre LIKE '%Sci-Fi%' AND year BETWEEN 2015 AND 2020",
+     "use_semantic": true,
+     "semantic_query": "dark sci-fi suspenseful atmosphere dystopian thriller",
+     "reasoning": "SQL filters by year/genre, Semantic captures mood/atmosphere"
+   }
+   ```
+
+2. **Executor Runs in Parallel**
+   - SQL query executed across 3 databases → ~150 sci-fi films (2015-2020)
+   - Semantic search in ChromaDB → Top 10 films matching "dark suspenseful" vibe
+   - Results combined with metadata (title, year, rating, plot)
+
+3. **Evaluator Assessment**
+   ```json
+   {
+     "data_sufficient": true,
+     "confidence": 0.85,
+     "reasoning": "SQL provided time/genre filter, Semantic provided atmospheric matches, high confidence in result quality"
+   }
+   ```
+
+4. **Synthesizer Output**
+   - Merges SQL + Semantic results
+   - Prioritizes films appearing in both (high confidence)
+   - Cites sources: "Found in database MovieLens, confirmed by semantic similarity"
+   - Formats as natural response with titles, years, brief descriptions
+
+**Langfuse Trace Example:**
+- Total latency: 4.2s (Planner 1.1s, Executor 2.3s, Evaluator 0.4s, Synthesizer 0.8s)
+- Token usage: 450 input, 120 output (~$0.002 cost (GPT-4o-mini))
+- Tools: SQL + Semantic (no replanning needed)
 
 ## Project Structure
 
@@ -197,18 +403,33 @@ flowchart TB
 Agentic_Systems_with_RAG_Lamy-Waerniers/
 │
 ├── code/                                    # Main source code (modular architecture)
-│   ├── app.py                               # Streamlit UI and main entry point
-│   ├── agent.py                             # LangGraph workflow construction
-│   ├── nodes.py                             # All workflow nodes (planner, SQL, semantic, OMDB, web, synthesizer)
-│   ├── tools.py                             # Tool implementations (SQL query, web search, OMDB API, semantic search)
-│   ├── models.py                            # Shared type definitions (AgentState, PlannerOutput, SQLOutput)
-│   ├── config.py                            # Centralized configuration (API keys, paths, LLM instance)
-│   ├── utils.py                             # Helper functions (catalog builder, routing logic)
-│   ├── embedding.py                         # Vector embedding utilities
-│   └── notebooks/                           # Jupyter notebooks for development
-│       ├── embeding.ipynb                   # Embedding pipeline notebook
-│       ├── SQLdb_creator.ipynb              # Database creation from CSVs
-│       └── test_semantic_search.ipynb       # Semantic search validation
+│   ├── core/                                # Core system components
+│   │   ├── agent.py                         # LangGraph workflow construction
+│   │   ├── models.py                        # Pydantic models (PlannerOutput, EvaluationResult)
+│   │   └── state.py                         # AgentState TypedDict definition
+│   ├── nodes/                               # LangGraph workflow nodes
+│   │   ├── planner.py                       # Query analysis and tool selection
+│   │   ├── executor.py                      # Parallel tool execution
+│   │   ├── evaluator.py                     # Result sufficiency evaluation
+│   │   └── synthesizer.py                   # Response generation with sources
+│   ├── tools/                               # Tool implementations
+│   │   ├── sql_tool.py                      # SQLite database queries
+│   │   ├── semantic_tool.py                 # ChromaDB vector search
+│   │   ├── omdb_tool.py                     # OMDB API integration
+│   │   └── web_tool.py                      # DuckDuckGo web search
+│   ├── prompts/                             # Prompt templates
+│   │   ├── planner_prompts.py               # Planner node prompts
+│   │   ├── evaluator_prompts.py             # Evaluator node prompts
+│   │   └── synthesizer_prompts.py           # Synthesizer node prompts
+│   ├── notebooks/                           # Jupyter notebooks for development
+│   │   ├── embeding.ipynb                   # Embedding pipeline notebook
+│   │   ├── SQLdb_creator.ipynb              # Database creation from CSVs
+│   │   ├── test_semantic_search.ipynb       # Semantic search validation
+│   │   └── testing.ipynb                    # General testing and experiments
+│   ├── streamlit_app.py                     # Streamlit UI and main entry point
+│   ├── config.py                            # Centralized configuration (API keys, paths)
+│   ├── utils.py                             # Helper functions (catalog builder)
+│   └── embedding.py                         # Vector embedding utilities
 │
 ├── data/                                    # Data storage
 │   ├── csv_db/                              # Source CSV files
@@ -220,18 +441,22 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 │   ├── vector_database/                     # ChromaDB persistent storage
 │   │   ├── chroma.sqlite3                   # Vector DB metadata (42.7MB)
 │   │   └── 19c0759d-.../                    # Embedding data (114MB)
-│   └── memory/                              # Conversation storage
+│   └── memory/                              # Conversation storage (future)
 │       ├── conversations/
 │       └── user_profiles/
 │
-├── doc/                                     # Documentation
+├── docs/                                    # Documentation
+│   ├── plans/                               # Design and implementation documents
+│   └── REPOSITORY_AUDIT.md                  # Repository audit and cleanup plan
+│
+├── doc/                                     # Legacy documentation (to be consolidated)
 │   ├── graph_schema.png                     # LangGraph workflow diagram
 │   ├── omdb_api_doc.json                    # OMDB API reference
 │   └── OMDB_API_doc.txt
 │
 ├── .env                                     # Environment configuration (git-ignored)
 ├── .gitignore                               # Git ignore rules
-├── requirements.txt                         # Python dependencies (223 packages)
+├── requirements.txt                         # Python dependencies
 └── README.md                                # This file
 ```
 
@@ -239,44 +464,91 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 
 #### Core Modules:
 
+**Configuration & State:**
 - **`config.py`** - Central configuration hub
-  - API keys (OpenAI, OMDB)
+  - API keys (OpenAI, OMDB, Langfuse)
   - Absolute paths to data folders
   - LLM instance (ChatOpenAI)
 
-- **`models.py`** - Shared type definitions
+- **`core/state.py`** - State management
   - `AgentState`: TypedDict defining the workflow state
-  - `PlannerOutput`: Pydantic model for planner decisions
-  - `SQLOutput`: Pydantic model for SQL execution decisions
+  - Tracks question, conversation history, results, and iteration count
 
-- **`tools.py`** - Tool implementations
-  - `execute_sql_query()`: Query SQLite databases
-  - `semantic_search()`: Vector similarity search with ChromaDB
-  - `omdb_api()`: Fetch movie metadata from OMDB
-  - `web_search()`: DuckDuckGo web search
+- **`core/models.py`** - Pydantic models
+  - `PlannerOutput`: Structured planner decisions (tool selection, queries)
+  - `EvaluationResult`: Evaluator output (sufficiency assessment)
+  - Enforces type safety via OpenAI function calling
 
-- **`nodes.py`** - LangGraph workflow nodes
-  - `planner_node()`: Analyzes question and decides which tools to use
-  - `sql_node()`: Generates and executes SQL queries
-  - `semantic_search_node()`: Performs vector search
-  - `omdb_node()`: Fetches enriched movie data
-  - `web_node()`: Searches the web
-  - `synthesizer_node()`: Combines results into natural language response
+**Workflow Nodes:**
+- **`nodes/planner.py`** - Planner node
+  - Analyzes question + history using LLM
+  - Selects tools based on mandatory keyword rules
+  - Outputs structured ExecutionPlan
 
+- **`nodes/executor.py`** - Executor node
+  - Runs selected tools in parallel (asyncio)
+  - Combines results from all sources
+  - Handles errors gracefully
+
+- **`nodes/evaluator.py`** - Evaluator node
+  - Assesses if results are sufficient
+  - Can trigger replanning (max 2 cycles)
+  - Prevents infinite loops
+
+- **`nodes/synthesizer.py`** - Synthesizer node
+  - Combines tool results into natural response
+  - Cites sources (database names, APIs, web)
+  - Formats answer for readability
+
+**Tool Implementations:**
+- **`tools/sql_tool.py`** - SQL database access
+  - Queries across 3 SQLite databases (Netflix, Amazon, Disney+)
+  - Supports filters (genre, year, rating, type)
+  - Schema introspection
+
+- **`tools/semantic_tool.py`** - Vector search
+  - ChromaDB integration with OpenAI embeddings
+  - Similarity search over 8,000+ movie plots
+  - Returns top K results with scores
+
+- **`tools/omdb_tool.py`** - OMDB API
+  - Fetches metadata (cast, awards, ratings, posters)
+  - Handles API rate limits
+  - Returns structured JSON
+
+- **`tools/web_tool.py`** - Web search
+  - DuckDuckGo integration
+  - Latest movie news and trends
+  - Fallback for current events
+
+**Prompts:**
+- **`prompts/planner_prompts.py`** - Planner instructions
+  - Tool selection guidelines with examples
+  - Mandatory keyword rules
+  - Few-shot demonstrations
+
+- **`prompts/evaluator_prompts.py`** - Evaluation criteria
+- **`prompts/synthesizer_prompts.py`** - Response formatting
+
+**Utilities:**
 - **`utils.py`** - Helper functions
-  - `build_db_catalog()`: Introspects database schema
-  - `format_catalog_for_llm()`: Formats catalog for LLM prompts
+  - `build_db_catalog()`: Schema introspection
   - Routing functions for conditional edges
 
-- **`agent.py`** - LangGraph workflow builder
-  - Constructs the StateGraph
-  - Defines node connections and routing
-  - Compiles workflow with MemorySaver checkpointer
+- **`embedding.py`** - Embedding utilities
+  - OpenAI embedding generation
+  - Vector storage management
 
-- **`app.py`** - Streamlit application
-  - UI components (chat interface, source attribution)
-  - Session state management
-  - Workflow execution and streaming
+**Application:**
+- **`core/agent.py`** - LangGraph workflow builder
+  - Constructs StateGraph with all nodes
+  - Defines edges and routing logic
+  - Compiles with MemorySaver checkpointer
+
+- **`streamlit_app.py`** - Streamlit UI
+  - Chat interface with conversation history
+  - Source attribution display
+  - Langfuse integration for observability
 
 ---
 

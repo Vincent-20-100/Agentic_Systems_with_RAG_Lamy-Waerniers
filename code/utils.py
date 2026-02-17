@@ -3,7 +3,7 @@
 # =================================
 import os
 import sqlite3
-from models import AgentState
+from core.state import AgentState
 
 
 # =================================
