@@ -118,8 +118,8 @@ Create a `.env` file at the root and add:
 ```env
 OPENAI_API_KEY="your_openai_api_key"
 OMDB_API_KEY="your_omdb_api_key"
-LANGFUSE_SECRET_KEY = "your_langfuse_secret_key"
-LANGFUSE_PUBLIC_KEY = "your_langfuse_public_key"
+LANGFUSE_SECRET_KEY="your_langfuse_secret_key"
+LANGFUSE_PUBLIC_KEY="your_langfuse_public_key"
 ```
 
 ### Step 5: Data files
@@ -174,6 +174,7 @@ When you run a query, Langfuse captures:
 
 4. **Cost Management**: "Can we optimize prompts to reduce token usage?"
    - Sum token usage across queries → identify verbose prompts → refine
+   - See the token optimization strategies in the Architecture section for ways to reduce prompt verbosity.
 
 ### Example Insights
 
@@ -185,7 +186,7 @@ Here's what Langfuse shows for a typical query:
 - **Token Usage**:
   - Planner: 340 input, 85 output
   - Synthesizer: 180 input, 95 output
-  - Total: ~$0.0018 (GPT-4o-mini)
+  - Total: ~$0.002 (GPT-4o-mini)
 - **Execution Time**:
   - Planner: 1.1s
   - Executor (parallel): 2.3s (SQL 1.8s, Semantic 2.1s)
