@@ -122,7 +122,7 @@ LANGFUSE_PUBLIC_KEY="your_langfuse_public_key"
 ```
 
 ### Step 5: Data files
-You can use the jupyter notebooks (code/notebooks) to create the SQL and the cevtor database using the .csv files.
+You can use the jupyter notebooks (code/notebooks) to create the SQL and the vector database using the .csv files.
 
 **OR**
 
@@ -403,18 +403,33 @@ The Planner uses **mandatory keyword-based rules** for deterministic tool select
 Agentic_Systems_with_RAG_Lamy-Waerniers/
 │
 ├── code/                                    # Main source code (modular architecture)
-│   ├── app.py                               # Streamlit UI and main entry point
-│   ├── agent.py                             # LangGraph workflow construction
-│   ├── nodes.py                             # All workflow nodes (planner, SQL, semantic, OMDB, web, synthesizer)
-│   ├── tools.py                             # Tool implementations (SQL query, web search, OMDB API, semantic search)
-│   ├── models.py                            # Shared type definitions (AgentState, PlannerOutput, SQLOutput)
-│   ├── config.py                            # Centralized configuration (API keys, paths, LLM instance)
-│   ├── utils.py                             # Helper functions (catalog builder, routing logic)
-│   ├── embedding.py                         # Vector embedding utilities
-│   └── notebooks/                           # Jupyter notebooks for development
-│       ├── embeding.ipynb                   # Embedding pipeline notebook
-│       ├── SQLdb_creator.ipynb              # Database creation from CSVs
-│       └── test_semantic_search.ipynb       # Semantic search validation
+│   ├── core/                                # Core system components
+│   │   ├── agent.py                         # LangGraph workflow construction
+│   │   ├── models.py                        # Pydantic models (PlannerOutput, EvaluationResult)
+│   │   └── state.py                         # AgentState TypedDict definition
+│   ├── nodes/                               # LangGraph workflow nodes
+│   │   ├── planner.py                       # Query analysis and tool selection
+│   │   ├── executor.py                      # Parallel tool execution
+│   │   ├── evaluator.py                     # Result sufficiency evaluation
+│   │   └── synthesizer.py                   # Response generation with sources
+│   ├── tools/                               # Tool implementations
+│   │   ├── sql_tool.py                      # SQLite database queries
+│   │   ├── semantic_tool.py                 # ChromaDB vector search
+│   │   ├── omdb_tool.py                     # OMDB API integration
+│   │   └── web_tool.py                      # DuckDuckGo web search
+│   ├── prompts/                             # Prompt templates
+│   │   ├── planner_prompts.py               # Planner node prompts
+│   │   ├── evaluator_prompts.py             # Evaluator node prompts
+│   │   └── synthesizer_prompts.py           # Synthesizer node prompts
+│   ├── notebooks/                           # Jupyter notebooks for development
+│   │   ├── embeding.ipynb                   # Embedding pipeline notebook
+│   │   ├── SQLdb_creator.ipynb              # Database creation from CSVs
+│   │   ├── test_semantic_search.ipynb       # Semantic search validation
+│   │   └── testing.ipynb                    # General testing and experiments
+│   ├── streamlit_app.py                     # Streamlit UI and main entry point
+│   ├── config.py                            # Centralized configuration (API keys, paths)
+│   ├── utils.py                             # Helper functions (catalog builder)
+│   └── embedding.py                         # Vector embedding utilities
 │
 ├── data/                                    # Data storage
 │   ├── csv_db/                              # Source CSV files
@@ -426,18 +441,22 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 │   ├── vector_database/                     # ChromaDB persistent storage
 │   │   ├── chroma.sqlite3                   # Vector DB metadata (42.7MB)
 │   │   └── 19c0759d-.../                    # Embedding data (114MB)
-│   └── memory/                              # Conversation storage
+│   └── memory/                              # Conversation storage (future)
 │       ├── conversations/
 │       └── user_profiles/
 │
-├── doc/                                     # Documentation
+├── docs/                                    # Documentation
+│   ├── plans/                               # Design and implementation documents
+│   └── REPOSITORY_AUDIT.md                  # Repository audit and cleanup plan
+│
+├── doc/                                     # Legacy documentation (to be consolidated)
 │   ├── graph_schema.png                     # LangGraph workflow diagram
 │   ├── omdb_api_doc.json                    # OMDB API reference
 │   └── OMDB_API_doc.txt
 │
 ├── .env                                     # Environment configuration (git-ignored)
 ├── .gitignore                               # Git ignore rules
-├── requirements.txt                         # Python dependencies (223 packages)
+├── requirements.txt                         # Python dependencies
 └── README.md                                # This file
 ```
 
@@ -445,44 +464,91 @@ Agentic_Systems_with_RAG_Lamy-Waerniers/
 
 #### Core Modules:
 
+**Configuration & State:**
 - **`config.py`** - Central configuration hub
-  - API keys (OpenAI, OMDB)
+  - API keys (OpenAI, OMDB, Langfuse)
   - Absolute paths to data folders
   - LLM instance (ChatOpenAI)
 
-- **`models.py`** - Shared type definitions
+- **`core/state.py`** - State management
   - `AgentState`: TypedDict defining the workflow state
-  - `PlannerOutput`: Pydantic model for planner decisions
-  - `SQLOutput`: Pydantic model for SQL execution decisions
+  - Tracks question, conversation history, results, and iteration count
 
-- **`tools.py`** - Tool implementations
-  - `execute_sql_query()`: Query SQLite databases
-  - `semantic_search()`: Vector similarity search with ChromaDB
-  - `omdb_api()`: Fetch movie metadata from OMDB
-  - `web_search()`: DuckDuckGo web search
+- **`core/models.py`** - Pydantic models
+  - `PlannerOutput`: Structured planner decisions (tool selection, queries)
+  - `EvaluationResult`: Evaluator output (sufficiency assessment)
+  - Enforces type safety via OpenAI function calling
 
-- **`nodes.py`** - LangGraph workflow nodes
-  - `planner_node()`: Analyzes question and decides which tools to use
-  - `sql_node()`: Generates and executes SQL queries
-  - `semantic_search_node()`: Performs vector search
-  - `omdb_node()`: Fetches enriched movie data
-  - `web_node()`: Searches the web
-  - `synthesizer_node()`: Combines results into natural language response
+**Workflow Nodes:**
+- **`nodes/planner.py`** - Planner node
+  - Analyzes question + history using LLM
+  - Selects tools based on mandatory keyword rules
+  - Outputs structured ExecutionPlan
 
+- **`nodes/executor.py`** - Executor node
+  - Runs selected tools in parallel (asyncio)
+  - Combines results from all sources
+  - Handles errors gracefully
+
+- **`nodes/evaluator.py`** - Evaluator node
+  - Assesses if results are sufficient
+  - Can trigger replanning (max 2 cycles)
+  - Prevents infinite loops
+
+- **`nodes/synthesizer.py`** - Synthesizer node
+  - Combines tool results into natural response
+  - Cites sources (database names, APIs, web)
+  - Formats answer for readability
+
+**Tool Implementations:**
+- **`tools/sql_tool.py`** - SQL database access
+  - Queries across 3 SQLite databases (Netflix, Amazon, Disney+)
+  - Supports filters (genre, year, rating, type)
+  - Schema introspection
+
+- **`tools/semantic_tool.py`** - Vector search
+  - ChromaDB integration with OpenAI embeddings
+  - Similarity search over 8,000+ movie plots
+  - Returns top K results with scores
+
+- **`tools/omdb_tool.py`** - OMDB API
+  - Fetches metadata (cast, awards, ratings, posters)
+  - Handles API rate limits
+  - Returns structured JSON
+
+- **`tools/web_tool.py`** - Web search
+  - DuckDuckGo integration
+  - Latest movie news and trends
+  - Fallback for current events
+
+**Prompts:**
+- **`prompts/planner_prompts.py`** - Planner instructions
+  - Tool selection guidelines with examples
+  - Mandatory keyword rules
+  - Few-shot demonstrations
+
+- **`prompts/evaluator_prompts.py`** - Evaluation criteria
+- **`prompts/synthesizer_prompts.py`** - Response formatting
+
+**Utilities:**
 - **`utils.py`** - Helper functions
-  - `build_db_catalog()`: Introspects database schema
-  - `format_catalog_for_llm()`: Formats catalog for LLM prompts
+  - `build_db_catalog()`: Schema introspection
   - Routing functions for conditional edges
 
-- **`agent.py`** - LangGraph workflow builder
-  - Constructs the StateGraph
-  - Defines node connections and routing
-  - Compiles workflow with MemorySaver checkpointer
+- **`embedding.py`** - Embedding utilities
+  - OpenAI embedding generation
+  - Vector storage management
 
-- **`app.py`** - Streamlit application
-  - UI components (chat interface, source attribution)
-  - Session state management
-  - Workflow execution and streaming
+**Application:**
+- **`core/agent.py`** - LangGraph workflow builder
+  - Constructs StateGraph with all nodes
+  - Defines edges and routing logic
+  - Compiles with MemorySaver checkpointer
+
+- **`streamlit_app.py`** - Streamlit UI
+  - Chat interface with conversation history
+  - Source attribution display
+  - Langfuse integration for observability
 
 ---
 
