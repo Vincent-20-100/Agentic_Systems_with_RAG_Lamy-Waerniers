@@ -1,50 +1,47 @@
-# 🎬 Albert Query - Agentic Movie Intelligence System
+# Albert Query — Agentic NL2SQL & RAG Conversational Engine
 
-> An intelligent conversational agent for querying movie and TV series data using Retrieval Augmented Generation (RAG), agentic workflow orchestration, and semantic search.
+> A production-ready blueprint for building a context-aware conversational AI layer over any structured database. Demonstrated on a multi-source entertainment dataset (Netflix, Disney+, Amazon Prime), but **engineered for direct adaptation to any closed, proprietary data environment**.
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.51.0-FF4B4B.svg)](https://streamlit.io/)
-[![LangChain](https://img.shields.io/badge/LangChain-1.0.3-00ADD8.svg)](https://www.langchain.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.0.2-00ADD8.svg)](https://langchain-ai.github.io/langgraph/)
+[![LangChain](https://img.shields.io/badge/LangChain-1.0.3-00ADD8.svg)](https://www.langchain.com/)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-1.3.4-FF6F61.svg)](https://www.trychroma.com/)
-
-**Albert Query** is an agentic AI system developed at **Albert School X Mines Paris - PSL**. Unlike traditional chatbots, it orchestrates multiple data sources through an intelligent four-node workflow (Planner → Executor → Evaluator → Synthesizer) with self-correction capabilities, parallel tool execution, and semantic understanding.
-
----
-
-## ✨ Features
-
-### Core Capabilities
-
-🧠 **Intelligent Query Planning**
-Analyzes questions and conversation history to select optimal tools (SQL, Semantic Search, OMDB, Web) with mandatory keyword triggers for deterministic tool selection.
-
-🗄️ **Multi-Database SQL Queries**
-8,000+ movies/shows from Netflix, Disney+, Amazon Prime with structured filters (year, genre, rating, type) and automatic schema understanding.
-
-🔍 **Semantic Vector Search**
-Find movies by meaning, not keywords—ask for "dark investigation atmosphere" and get relevant thrillers even if those exact words aren't in the database.
-
-🎬 **External API Integration**
-OMDB API for posters, cast, directors, plot details, and awards—visual metadata not available in databases.
-
-🌐 **Web Search**
-Latest releases and trending movies from current web sources.
-
-🔄 **Self-Correcting Workflow**
-Evaluator node can trigger replanning if initial results are insufficient (max 2 execution cycles), ensuring quality responses.
-
-⚡ **Parallel Execution**
-All selected tools run simultaneously via asyncio for optimal performance.
-
-📊 **Production Observability**
-Full Langfuse integration for tracing, debugging, cost tracking, and performance monitoring.
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.51.0-FF4B4B.svg)](https://streamlit.io/)
 
 ---
 
-## 🏗️ Architecture
+## What This Project Demonstrates
 
-Albert Query implements an agentic RAG system using LangGraph as a state machine with four specialized nodes:
+This system is a **"plug-and-play" AI architecture** designed for any organization looking to unlock siloed, structured data through natural language. It transforms static databases into an interactive intelligence hub — reducing data retrieval time while maintaining high precision through automated result evaluation.
+
+The core engine is domain-agnostic. The movie dataset is simply the vehicle used to demonstrate and validate the architecture. The same system can be deployed over HR databases, financial records, product catalogs, CRM data, or any proprietary SQL/vector store.
+
+**Built as part of an M1 program at Albert School X Mines Paris - PSL.**
+
+---
+
+## Core Technical Achievements
+
+### Natural Language to SQL (NL2SQL)
+Engineered a pipeline that translates complex natural language queries into optimized SQL, enabling non-technical users to query structured databases without writing a single line of code. The system introspects the schema at runtime, making it immediately portable to new database structures.
+
+### Hybrid Semantic Search (RAG)
+Implemented a vector-based retrieval system using ChromaDB (text-embedding-3-small). This captures nuances and contextual relationships that traditional keyword or SQL searches miss — critical for qualitative queries like "dark investigation atmosphere" or "emotionally complex storyline."
+
+### Agentic Planner-Executor-Evaluator Loop
+The core reasoning engine operates as a self-correcting autonomous agent. If initial results are insufficient, the system replans — selecting different or additional tools — without human intervention. Maximum 2 iterations, preventing runaway costs while guaranteeing answer quality.
+
+### Multi-Tool Orchestration
+Dynamic "tool belt" executed in **parallel** via asyncio: SQL, Vector Search, external APIs, and Web Search. The planner selects the minimum effective combination per query, not a fixed pipeline.
+
+### Enterprise-Grade Observability
+Full Langfuse integration for trace analysis, cost tracking (~$0.002/query), latency per node, and debugging of LLM decision chains.
+
+---
+
+## Architecture
+
+The workflow is a stateful LangGraph graph with four specialized nodes and conditional routing:
 
 ```mermaid
 graph TB
@@ -59,15 +56,15 @@ graph TB
 
     subgraph Execution["⚡ EXECUTOR NODE (Parallel)"]
         Executor[Run Tools Simultaneously]
-        Executor --> SQL[(🗄️ SQL Database<br/>8,000+ movies)]
+        Executor --> SQL[(🗄️ SQL Database)]
         Executor --> Semantic[(🔍 Semantic Search<br/>Vector Embeddings)]
-        Executor --> OMDB[(🎬 OMDB API<br/>Metadata & Posters)]
-        Executor --> Web[(🌐 Web Search<br/>Latest & Trending)]
+        Executor --> API[(🔌 External API<br/>Enrichment)]
+        Executor --> Web[(🌐 Web Search<br/>Current Data)]
     end
 
     SQL --> Results[Combined Results]
     Semantic --> Results
-    OMDB --> Results
+    API --> Results
     Web --> Results
 
     Results --> Evaluator
@@ -80,7 +77,7 @@ graph TB
     Evaluator -->|Yes| Synthesizer
 
     subgraph Synthesis["📝 SYNTHESIZER NODE (LLM)"]
-        Synthesizer[Generate Response<br/>+ Sources]
+        Synthesizer[Generate Response<br/>+ Source Attribution]
     end
 
     Synthesizer --> End([Final Answer])
@@ -89,160 +86,116 @@ graph TB
     Evaluator -.-> Note1
 ```
 
-### The Four-Node Workflow
+### Node Responsibilities
 
-**1. Planner (LLM)** - Analyzes query intent, selects tools via structured outputs (Pydantic), uses keyword triggers (e.g., "poster" → OMDB mandatory)
+**1. Planner (LLM + structured outputs)** — Analyzes query intent and conversation history. Selects the minimal effective tool combination via Pydantic-validated structured output. Uses keyword triggers for deterministic routing on high-confidence patterns.
 
-**2. Executor (Parallel)** - Runs selected tools simultaneously with asyncio, combines results from SQL/Semantic/OMDB/Web
+**2. Executor (async parallel)** — Runs all selected tools simultaneously with asyncio. Isolates failures per tool so one error never blocks the full response.
 
-**3. Evaluator (LLM)** - Assesses result sufficiency, triggers replanning if needed (max 2 cycles), prevents incomplete answers
+**3. Evaluator (LLM)** — Assesses whether the retrieved data is sufficient to answer the original query. Triggers replanning with refined instructions if not. Acts as an automated quality gate.
 
-**4. Synthesizer (LLM)** - Generates natural language response with source attribution, maintains conversation context
-
-### Tool Selection Logic
-
-**Mandatory Rules:**
-- **Poster/metadata requests** → OMDB (keywords: poster, cast, director, awards)
-- **Qualitative searches** → Semantic (keywords: mood, atmosphere, theme, like, similar)
-- **Structured queries** → SQL (keywords: how many, count, genre, year, rating)
-- **Current events** → Web (keywords: latest, trending, 2026)
-
-**Example:** *"Dark sci-fi from 2020"* → SQL (year filter) + Semantic (dark sci-fi atmosphere)
+**4. Synthesizer (LLM)** — Generates the final natural language response with source attribution and conversation context.
 
 ---
 
-## 🔍 Monitoring with Langfuse
+## Tool Selection Logic
 
-Production-grade observability platform integrated for LLM application tracking.
+The planner applies structured decision rules, not arbitrary LLM judgment:
 
-**Key Capabilities:**
-- **Debugging**: See tool selection decisions and planner reasoning
-- **Cost Tracking**: Monitor OpenAI API usage per query (~$0.002/query avg)
-- **Performance**: Measure latency per node (Planner 1.1s, Executor 2.3s, Synthesizer 0.8s)
-- **Quality Assurance**: Identify wrong tool choices, replanning frequency, edge cases
+| Query Type | Tool(s) Selected |
+|---|---|
+| Specific item metadata (names, dates, ratings) | SQL |
+| Qualitative / thematic / mood-based | Semantic Search |
+| Visual metadata, detailed enrichment | External API |
+| Current events, real-time data | Web Search |
+| Complex queries crossing multiple dimensions | Combination (parallel) |
+
+---
+
+## Observability with Langfuse
+
+Production-grade LLM monitoring integrated end-to-end:
+
+- **Trace debugging** — Full visibility into planner decisions, tool calls, evaluator reasoning
+- **Cost tracking** — Token usage per node (~$0.002/query average on GPT-4o-mini)
+- **Latency profiling** — Per-node breakdown (Planner ~1.1s, Executor ~2.3s, Synthesizer ~0.8s)
+- **Quality assurance** — Identify replanning frequency, wrong tool selections, edge cases
 
 **Setup:**
-1. Create free account at [cloud.langfuse.com](https://cloud.langfuse.com)
-2. Generate API keys from project settings
-3. Add to `.env`:
-   ```env
-   LANGFUSE_SECRET_KEY="sk-lf-..."
-   LANGFUSE_PUBLIC_KEY="pk-lf-..."
-   ```
-
----
-
-## 📁 Project Structure
-
-```
-Agentic_Systems_with_RAG_Lamy-Waerniers/
-├── code/
-│   ├── core/
-│   │   ├── agent.py              # LangGraph workflow definition
-│   │   ├── models.py             # Pydantic models (ExecutionPlan, State)
-│   │   └── state.py              # AgentState schema
-│   ├── nodes/
-│   │   ├── planner.py            # Tool selection logic
-│   │   ├── executor.py           # Parallel tool execution
-│   │   ├── evaluator.py          # Result sufficiency check
-│   │   └── synthesizer.py        # Response generation
-│   ├── tools/
-│   │   ├── sql_tool.py           # Multi-database SQL queries
-│   │   ├── semantic_tool.py      # ChromaDB vector search
-│   │   ├── omdb_tool.py          # OMDB API integration
-│   │   └── web_search_tool.py    # Tavily web search
-│   ├── prompts/
-│   │   ├── planner_prompts.py    # Enhanced with keyword triggers
-│   │   ├── evaluator_prompts.py
-│   │   └── synthesizer_prompts.py
-│   ├── config.py                 # Configuration & API keys
-│   ├── utils.py                  # Database catalog builder
-│   └── streamlit_app.py          # Streamlit UI
-├── data/
-│   ├── databases/                # SQLite databases (Netflix, Disney+, Prime)
-│   └── vectordb/                 # ChromaDB embeddings (114MB)
-├── docs/
-│   └── REPOSITORY_AUDIT.md       # Technical debt & cleanup plan
-├── .env                          # API keys (not committed)
-└── requirements.txt
+```env
+LANGFUSE_SECRET_KEY="sk-lf-..."
+LANGFUSE_PUBLIC_KEY="pk-lf-..."
 ```
 
-### Architecture Breakdown
+---
 
-**Core Modules:**
-- `core/agent.py` - LangGraph StateGraph with conditional edges
-- `core/models.py` - Pydantic schemas for structured LLM outputs
-- `core/state.py` - TypedDict defining workflow state
+## Business Applicability
 
-**Node Implementations:**
-- `nodes/planner.py` - LLM with structured output, keyword-based tool selection
-- `nodes/executor.py` - Async tool orchestration, result aggregation
-- `nodes/evaluator.py` - LLM-based sufficiency check, replanning trigger
-- `nodes/synthesizer.py` - Final response generation with source citation
+This architecture is a direct blueprint for enterprise use cases:
 
-**Tool Layer:**
-- `tools/sql_tool.py` - Multi-DB queries with catalog introspection
-- `tools/semantic_tool.py` - ChromaDB similarity search (text-embedding-3-small)
-- `tools/omdb_tool.py` - RESTful API client with caching
-- `tools/web_search_tool.py` - Tavily integration for current data
+- **Internal knowledge bases** — Let employees query company documentation, product specs, or internal policies in plain language
+- **CRM / Sales data** — Natural language access to customer records, deal history, pipeline analytics
+- **Financial reporting** — Query P&L, budget tables, or transactional databases without SQL expertise
+- **HR & Operations** — Headcount queries, performance data, scheduling — accessible to non-technical stakeholders
+- **Product catalogs** — Semantic discovery over inventory, specifications, or compatibility matrices
+
+Adapting this system to a new domain requires: replacing the SQL databases, re-embedding domain documents for the vector store, and updating the tool descriptions. The agent logic, evaluation loop, and observability stack require no changes.
 
 ---
 
-## 🚀 Future Improvements
+## Tech Stack
 
-### 1. 📦 Catalog Caching System
-**Problem:** Database catalog rebuilt on every startup (~2-5s delay)
-**Solution:** Cache to JSON with file modification time tracking
-**Impact:** 10-50x faster startup, auto-invalidation on schema changes
-
-### 2. 🧠 Persistent Long-Term Memory
-**Problem:** Conversations lost on restart (in-memory only)
-**Solution:** SQLite-based conversation storage with user preferences
-**Features:** Cross-session learning, semantic search over history, personalized recommendations
-
-### 3. 🔐 User Management & API Keys
-**Problem:** Single shared API keys, no multi-user support
-**Solution:** Streamlit authentication, encrypted per-user key storage, token tracking
-
-### 4. 📈 Embedding Quality Improvements
-**Current:** Single-sentence plot descriptions, similarity scores <50%
-**Improvement:** Enrich with API data (full plot, cast, themes), better chunking
-**Impact:** 10-20% better similarity scores, genre/cast matching
-
-### 5. 🎯 Token Optimization
-**Issues:** Verbose prompts (500-800 tokens), full catalog sent to planner (1000+ tokens)
-**Strategies:** Prompt compression, catalog summarization, conversation summarization, lazy loading
-
-### 6. 🎨 UI/UX Enhancements
-- Results table view toggle, movie cards with posters, query statistics dashboard
-- Dark mode, export to JSON/CSV, voice input, multi-language support (French/English)
-- Mobile responsiveness, keyboard shortcuts
-
-### 7. 🧪 Testing & Quality Assurance
-**Gap:** No automated tests
-**Needed:** Unit tests per node, integration tests for workflow, performance benchmarks, regression tests
-
-### 8. 🔒 Security & Privacy
-- API key encryption at rest, SQL injection prevention, PII detection/redaction
-- Audit logging, rate limiting, HTTPS enforcement, content filtering
-
-### 9. 🚀 Performance & Scalability
-- Result caching (Redis), vector index optimization (HNSW tuning), database indexing
-- Connection pooling, Docker deployment, CDN for static assets
-
-**Estimated Total Effort:** 40-60 hours for comprehensive implementation
+| Layer | Technology |
+|---|---|
+| Orchestration | LangGraph (StateGraph, conditional edges) |
+| LLM Integration | LangChain + OpenAI GPT-4o-mini |
+| Structured Outputs | Pydantic v2 |
+| Vector Store | ChromaDB + text-embedding-3-small |
+| Relational Data | SQLite (multi-database) |
+| Observability | Langfuse |
+| UI | Streamlit |
+| Async Execution | Python asyncio |
 
 ---
 
-## ⚙️ Installation
+## Project Structure
+
+```
+code/
+├── core/
+│   ├── agent.py              # LangGraph StateGraph definition
+│   ├── models.py             # Pydantic schemas (ExecutionPlan, EvaluatorDecision)
+│   └── state.py              # AgentState TypedDict
+├── nodes/
+│   ├── planner.py            # Structured tool selection
+│   ├── executor.py           # Parallel async execution
+│   ├── evaluator.py          # Result sufficiency evaluation
+│   └── synthesizer.py        # Response generation
+├── tools/
+│   ├── sql_tool.py           # Multi-DB queries with schema introspection
+│   ├── semantic_tool.py      # ChromaDB vector similarity search
+│   ├── omdb_tool.py          # REST API client (movie enrichment demo)
+│   └── web_tool.py           # Web search integration
+├── prompts/
+│   ├── planner_prompts.py
+│   ├── evaluator_prompts.py
+│   └── synthesizer_prompts.py
+├── config.py
+├── utils.py                  # Database catalog builder (runtime schema introspection)
+└── streamlit_app.py          # Conversational UI
+```
+
+---
+
+## Installation
 
 ### Prerequisites
 - Python 3.8+
 - OpenAI API key
-- OMDB API key (free at [omdbapi.com](http://www.omdbapi.com/apikey.aspx))
-- Tavily API key (optional, for web search)
+- OMDB API key (free at [omdbapi.com](http://www.omdbapi.com/apikey.aspx)) — demo-specific
+- Langfuse account (optional, for observability)
 
-### Step 1: Clone & Setup
+### Setup
 
 ```bash
 git clone https://github.com/Vincent-20-100/Agentic_Systems_with_RAG_Lamy-Waerniers.git
@@ -252,58 +205,41 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Step 2: Configure Environment
-
-Create `.env` file:
+Create `.env`:
 ```env
 OPENAI_API_KEY="your_openai_api_key"
 OMDB_API_KEY="your_omdb_api_key"
-TAVILY_API_KEY="your_tavily_api_key"
-LANGFUSE_SECRET_KEY="sk-lf-..."  # Optional
-LANGFUSE_PUBLIC_KEY="pk-lf-..."  # Optional
+LANGFUSE_SECRET_KEY="sk-lf-..."
+LANGFUSE_PUBLIC_KEY="pk-lf-..."
 ```
 
-### Step 3: Prepare Data
-
-Ensure database files exist:
-- `data/databases/*.db` - SQLite databases (included)
-- `data/vectordb/` - ChromaDB embeddings (auto-created or included)
-
-Run embedding creation if needed:
-```bash
-python code/notebooks/embedding.ipynb
-```
-
-### Step 4: Launch
-
+Run:
 ```bash
 streamlit run code/streamlit_app.py
 ```
 
-Access at [http://localhost:8501](http://localhost:8501)
+---
+
+## Future Improvements
+
+| Feature | Impact |
+|---|---|
+| Catalog caching (JSON + file-watch invalidation) | 10-50x faster startup |
+| Persistent conversation memory (SQLite) | Cross-session context retention |
+| Token optimization (prompt compression, lazy catalog loading) | 30-50% cost reduction |
+| Full embedding enrichment (plot + cast + themes) | 10-20% better semantic retrieval |
+| Automated test suite (unit + integration + regression) | Production confidence |
+| Docker deployment + API gateway | Cloud-ready packaging |
 
 ---
 
-## 👥 Contributors
+## Contributors
 
-This project was developed as part of our Master's degree at **Albert School X Mines Paris - PSL**.
-
-**Team:**
-Vincent Lamy & Alexandre Waerniers
-
-**Institution:**
-Albert School X Mines Paris PSL (Paris, France)
+**Vincent Lamy & Alexandre Waerniers**
+M1 AI Engineering — Albert School X Mines Paris - PSL (Paris, France)
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-<div align="center">
-
-**⭐ If you found this project useful, please consider giving it a star! ⭐**
-
-</div>
+MIT License — see [LICENSE](LICENSE) for details.

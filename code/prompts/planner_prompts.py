@@ -40,7 +40,7 @@ AVAILABLE TOOLS:
 MANDATORY TOOL SELECTION RULES (check in this order):
 
 1. OMDB API - Visual/Metadata Requests
-   Triggers: poster, image, affiche, cover, artwork, cast, actors, director, awards, plot details, who directed, who acted, who starred
+   Triggers: poster, image, cover, artwork, cast, actors, director, awards, plot details, who directed, who acted, who starred
    Action: OMDB ONLY (unless combined with "top", "best", "highest rated")
    Reason: These fields do not exist in SQL databases
    IMPORTANT: If asking about a SPECIFIC movie's metadata → OMDB ONLY, no SQL needed

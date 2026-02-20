@@ -126,7 +126,7 @@ st.markdown("""
         50% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.8); }
     }
 
-    /* Conteneur de statut animé */
+    /* Animated status container */
     .albert-status {
         display: flex;
         align-items: center;
@@ -160,13 +160,13 @@ st.markdown("""
         animation: spin 1s linear infinite;
     }
 
-    /* Dots animés */
+    /* Animated dots */
     .loading-dots::after {
         content: '...';
         animation: dots 1.5s steps(3, end) infinite;
     }
 
-    /* Style pour les différents types de statut */
+    /* Status type styles */
     .status-thinking {
         border-left-color: #d946ef;
         background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
@@ -202,7 +202,7 @@ st.markdown("""
 
 # Check API key
 if not OPENAI_API_KEY:
-    st.error("❌ OPENAI_API_KEY manquante")
+    st.error("❌ OPENAI_API_KEY missing")
     st.stop()
 
 # =================================
@@ -215,7 +215,7 @@ if "agent_messages" not in st.session_state:
     st.session_state.agent_messages = []
 
 if "db_catalog" not in st.session_state:
-    with st.spinner("⏳ Chargement des bases de données..."):
+    with st.spinner("⏳ Loading databases..."):
         catalog = build_db_catalog(DB_FOLDER_PATH)
         st.session_state.db_catalog = catalog
 
@@ -230,7 +230,7 @@ st.markdown("""
         <div style="font-size: 80px; line-height: 1;">🧙‍♂️</div>
         <div>
             <h1>Albert Query</h1>
-            <p style="margin: 0; opacity: 0.9;">Ton assistant intelligent pour explorer tes bases de données</p>
+            <p style="margin: 0; opacity: 0.9;">Your intelligent assistant for exploring movie databases</p>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -245,40 +245,40 @@ with st.sidebar:
     if catalog.get("error"):
         st.error(f"❌ {catalog['error']}")
     else:
-        with st.expander("#### 🗄️ Bases de données disponibles", expanded=False):
+        with st.expander("#### 🗄️ Available Databases", expanded=False):
             for db_name, db_info in catalog["databases"].items():
                 if "error" not in db_info:
                     with st.expander(f"📊 {db_name}"):
-                        # Afficher les tables avec leurs colonnes
+                        # Display tables with their columns
                         tables = db_info.get("tables", {})
                         for table_name, table_info in tables.items():
                             with st.expander(f"{table_name}"):
                                 row_count = table_info.get("row_count", "?")
-                                st.caption(f"**Lignes:** {row_count}")
+                                st.caption(f"**Rows:** {row_count}")
 
-                                st.markdown("**Colonnes:**")
+                                st.markdown("**Columns:**")
                                 for col in table_info.get("columns", []):
                                     col_name = col["name"]
                                     col_type = col["type"]
                                     pk_icon = "🔑" if col.get("primary_key", False) else ""
                                     st.caption(f"{pk_icon} {col_name} ({col_type})")
 
-        with st.expander("#### 🛠️ Outils disponibles", expanded=False):
+        with st.expander("#### 🛠️ Available Tools", expanded=False):
                 tools = [
-                    ("🗄️", "Requête SQL", "Interroger directement les bases de données"),
-                    ("🔍", "Recherche sémantique", "Recherche intelligente par similarité (RAG)"),
-                    ("🎬", "API OMDB", "Informations sur les films"),
-                    ("🌐", "Recherche Web", "Recherche sur internet")
+                    ("🗄️", "SQL Query", "Query databases directly"),
+                    ("🔍", "Semantic Search", "Intelligent similarity search (RAG)"),
+                    ("🎬", "OMDB API", "Movie metadata and enrichment"),
+                    ("🌐", "Web Search", "Search the internet for current data")
                 ]
 
                 for icon, name, desc in tools:
                     st.markdown(f"**{icon} {name}**  \n*{desc}*")
 
-        st.markdown("#### 💡 Exemples de questions")
+        st.markdown("#### 💡 Example Questions")
         examples = [
-            "Combien de genres de films y a-t-il dans nos bases de données ?",
-            "Montre moi l'affiche de  Ex Machina.",
-            "Propose des films d'enquêtes avec une ambiance sombre et une intrigue à suspense.",
+            "How many movie genres are in our databases?",
+            "Show me the poster for Ex Machina.",
+            "Suggest investigation movies with a dark atmosphere and suspenseful plot.",
         ]
         for idx, example in enumerate(examples, 1):
             if st.button(f"💬 {example}", key=f"example_{idx}", use_container_width=True):
@@ -290,27 +290,27 @@ with st.sidebar:
 # =================================
 st.markdown("### 💬 Conversation")
 
-# Conteneur pour les messages avec scroll
+# Message container with scroll
 chat_container = st.container()
 
 with chat_container:
-    # Premier message de bienvenue
+    # First welcome message
     if len(st.session_state.chat_messages) == 0:
         with st.chat_message("assistant", avatar="🧙‍♂️"):
             st.markdown("""
-            **Salut ! 👋 Moi c'est Albert Query**
+            **Hey! 👋 I'm Albert Query**
 
-            Je suis là pour t'aider à explorer tes bases de données de façon intelligente.
+            I'm here to help you explore your databases intelligently.
 
-            Pose-moi une question pour commencer !
+            Ask me anything to get started!
             """)
         st.session_state.chat_messages.append({
             "role": "assistant",
-            "content": "Message de bienvenue",
+            "content": "Welcome message",
             "is_welcome": True
         })
 
-    # Afficher l'historique des messages
+    # Display message history
     for msg in st.session_state.chat_messages:
         if msg.get("is_welcome"):
             continue
@@ -319,10 +319,10 @@ with chat_container:
             with st.chat_message("assistant", avatar="🧙‍♂️"):
                 st.markdown(msg["content"])
 
-                # Afficher les sources si disponibles
+                # Display sources if available
                 if "sources" in msg and msg["sources"]:
                     st.divider()
-                    st.caption("📚 **Sources utilisées:**")
+                    st.caption("📚 **Sources used:**")
 
                     cols = st.columns(min(3, len(msg["sources"])))
                     for idx, source in enumerate(msg["sources"]):
@@ -332,7 +332,7 @@ with chat_container:
                             if source_type == "database":
                                 st.markdown(f"""
                                     <div class="source-badge db-badge">
-                                    🗄️ Base SQL: {source['name']}
+                                    🗄️ SQL DB: {source['name']}
                                     </div>
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
@@ -341,7 +341,7 @@ with chat_container:
                             elif source_type == "semantic":
                                 st.markdown(f"""
                                     <div class="source-badge semantic-badge">
-                                    🔍 Vectorielle: {source['name']}
+                                    🔍 Vector: {source['name']}
                                     </div>
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
@@ -373,7 +373,7 @@ with chat_container:
                                 else:
                                     st.markdown(f"""
                                         <div class="source-badge web-badge">
-                                        🌐 Recherche Web
+                                        🌐 Web Search
                                         </div>
                                     """, unsafe_allow_html=True)
 
@@ -390,19 +390,17 @@ if "pending_query" in st.session_state:
     prompt = st.session_state.pending_query
     del st.session_state.pending_query
 else:
-    prompt = st.chat_input("Pose-moi une question sur tes données... 💬")
+    prompt = st.chat_input("Ask me anything about your data... 💬")
 
 if prompt:
 
-    # Ajouter le message utilisateur
     st.session_state.chat_messages.append({"role": "user", "content": prompt})
     st.session_state.agent_messages.append(HumanMessage(content=prompt))
 
-    # Afficher le message utilisateur
+    # Display user message
     with st.chat_message("user", avatar="🧐"):
         st.markdown(prompt)
 
-    # Traitement par l'agent avec animations
     with st.chat_message("assistant", avatar="🧙‍♂️"):
         status = st.empty()
         response_placeholder = st.empty()
@@ -438,7 +436,7 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-thinking">
                         <div class="albert-status-icon">🧠</div>
-                        <div class="albert-status-text">Albert réfléchit à ta question<span class="loading-dots"></span></div>
+                        <div class="albert-status-text">Planning the best approach<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -446,7 +444,7 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-sql">
                         <div class="albert-status-icon">🗄️</div>
-                        <div class="albert-status-text">Albert interroge la base de données SQL<span class="loading-dots"></span></div>
+                        <div class="albert-status-text">Querying SQL database<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -454,7 +452,7 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-semantic">
                         <div class="albert-status-icon">🔍</div>
-                        <div class="albert-status-text">Albert effectue une recherche sémantique (RAG)<span class="loading-dots"></span></div>
+                        <div class="albert-status-text">Running semantic search (RAG)<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -462,7 +460,7 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-omdb">
                         <div class="albert-status-icon">🎬</div>
-                        <div class="albert-status-text">Albert interroge OMDB<span class="loading-dots"></span></div>
+                        <div class="albert-status-text">Fetching metadata from OMDB<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -470,7 +468,7 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-web">
                         <div class="albert-status-icon">🌐</div>
-                        <div class="albert-status-text">Albert recherche sur le web<span class="loading-dots"></span></div>
+                        <div class="albert-status-text">Searching the web<span class="loading-dots"></span></div>
                         <div class="albert-spinner"></div>
                     </div>
                 """, unsafe_allow_html=True)
@@ -478,25 +476,24 @@ if prompt:
                 status.markdown("""
                     <div class="albert-status status-complete">
                         <div class="albert-status-icon">✅</div>
-                        <div class="albert-status-text">Réponse prête !</div>
+                        <div class="albert-status-text">Answer ready!</div>
                     </div>
                 """, unsafe_allow_html=True)
-                time.sleep(0.5)  # Petit délai pour voir le message "complete"
+                time.sleep(0.5)
 
         if result:
             status.empty()
 
-            # Extraire la réponse finale
             final_msgs = [m for m in result.get("messages", []) if isinstance(m, AIMessage)]
             if final_msgs:
                 response = final_msgs[-1].content
                 response_placeholder.markdown(response)
 
-                # Afficher les sources
+                # Display sources
                 sources_detailed = result.get("sources_detailed", [])
                 if sources_detailed:
                     sources_placeholder.divider()
-                    sources_placeholder.caption("📚 **Sources utilisées:**")
+                    sources_placeholder.caption("📚 **Sources used:**")
 
                     cols = sources_placeholder.columns(min(3, len(sources_detailed)))
                     for idx, source in enumerate(sources_detailed):
@@ -506,7 +503,7 @@ if prompt:
                             if source_type == "database":
                                 st.markdown(f"""
                                     <div class="source-badge db-badge">
-                                    🗄️ Base SQL: {source['name']}
+                                    🗄️ SQL DB: {source['name']}
                                     </div>
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
@@ -515,7 +512,7 @@ if prompt:
                             elif source_type == "semantic":
                                 st.markdown(f"""
                                     <div class="source-badge semantic-badge">
-                                    🔍 Vectorielle: {source['name']}
+                                    🔍 Vector: {source['name']}
                                     </div>
                                 """, unsafe_allow_html=True)
                                 if "details" in source:
@@ -547,18 +544,16 @@ if prompt:
                                 else:
                                     st.markdown(f"""
                                         <div class="source-badge web-badge">
-                                        🌐 Recherche Web
+                                        🌐 Web Search
                                         </div>
                                     """, unsafe_allow_html=True)
 
-                # Sauvegarder le message avec les sources
                 st.session_state.chat_messages.append({
                     "role": "assistant",
                     "content": response,
                     "sources": sources_detailed
                 })
 
-                # Mettre à jour l'historique de l'agent
                 user_msgs = [m for m in result["messages"] if isinstance(m, HumanMessage)]
                 if user_msgs:
                     st.session_state.agent_messages = [user_msgs[-1], final_msgs[-1]]
