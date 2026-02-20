@@ -382,37 +382,15 @@ def build_movie_embeddings(
 # === EXAMPLE USAGE ===
 
 if __name__ == "__main__":
-    # Configuration
-    DB_FOLDER = r"C:\Users\Vincent\GitHub\Vincent-20-100\Agentic_Systems_Project_Vlamy\data\databases"
-    CHROMA_PATH = r"C:\Users\Vincent\GitHub\Vincent-20-100\Agentic_Systems_Project_Vlamy\data\vector_database"
+    # Use scripts/create_vector_db.py to build embeddings
+    # Use scripts/test_semantic_search.py to run diagnostic queries
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+    DB_FOLDER = str(PROJECT_ROOT / "data" / "databases")
+    CHROMA_PATH = str(PROJECT_ROOT / "data" / "vector_database")
 
-    # Build embeddings
     stats = build_movie_embeddings(
         db_folder=DB_FOLDER,
         chroma_path=CHROMA_PATH,
-        force_rebuild=False,  # Set to True to rebuild everything
-        batch_size=100
+        force_rebuild=False,
+        batch_size=100,
     )
-
-    # Test query
-    print("\n" + "=" * 60)
-    print("🔍 TESTING QUERY")
-    print("=" * 60)
-
-    collection = get_or_create_collection(CHROMA_PATH)
-
-    # Example query
-    results = query_movies(
-        collection=collection,
-        query_text="action movie with explosions and car chases",
-        n_results=5
-    )
-
-    print(f"\n🎬 Top 5 results for: 'action movie with explosions'")
-    for i, result in enumerate(results, 1):
-        print(f"\n{i}. {result['title']}")
-        print(f"   📁 {result['database']} / {result['table']}")
-        print(f"   🆔 {result['id']}")
-        print(f"   📝 {result['description'][:100]}...")
-        if result['distance']:
-            print(f"   📊 Distance: {result['distance']:.4f}")

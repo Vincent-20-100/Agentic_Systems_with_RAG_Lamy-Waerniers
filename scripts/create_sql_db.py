@@ -9,7 +9,6 @@ Input:  data/csv_db/*.csv
 Output: data/databases/movie.db
 """
 import csv
-import os
 import sqlite3
 from pathlib import Path
 

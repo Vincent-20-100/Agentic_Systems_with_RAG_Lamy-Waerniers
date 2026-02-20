@@ -7,7 +7,6 @@ Usage:
 Run from the project root directory.
 Requires OPENAI_API_KEY in .env
 """
-import json
 import os
 import sys
 from pathlib import Path
