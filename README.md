@@ -161,28 +161,33 @@ Adapting this system to a new domain requires: replacing the SQL databases, re-e
 ## Project Structure
 
 ```
-code/
-├── core/
-│   ├── agent.py              # LangGraph StateGraph definition
-│   ├── models.py             # Pydantic schemas (ExecutionPlan, EvaluatorDecision)
-│   └── state.py              # AgentState TypedDict
-├── nodes/
-│   ├── planner.py            # Structured tool selection
-│   ├── executor.py           # Parallel async execution
-│   ├── evaluator.py          # Result sufficiency evaluation
-│   └── synthesizer.py        # Response generation
-├── tools/
-│   ├── sql_tool.py           # Multi-DB queries with schema introspection
-│   ├── semantic_tool.py      # ChromaDB vector similarity search
-│   ├── omdb_tool.py          # REST API client (movie enrichment demo)
-│   └── web_tool.py           # Web search integration
-├── prompts/
-│   ├── planner_prompts.py
-│   ├── evaluator_prompts.py
-│   └── synthesizer_prompts.py
-├── config.py
-├── utils.py                  # Database catalog builder (runtime schema introspection)
-└── streamlit_app.py          # Conversational UI
+├── code/
+│   ├── core/
+│   │   ├── agent.py              # LangGraph StateGraph definition
+│   │   ├── models.py             # Pydantic schemas (ExecutionPlan, EvaluatorDecision)
+│   │   └── state.py              # AgentState TypedDict
+│   ├── nodes/
+│   │   ├── planner.py            # Structured tool selection
+│   │   ├── executor.py           # Parallel async execution
+│   │   ├── evaluator.py          # Result sufficiency evaluation
+│   │   └── synthesizer.py        # Response generation
+│   ├── tools/
+│   │   ├── sql_tool.py           # Multi-DB queries with schema introspection
+│   │   ├── semantic_tool.py      # ChromaDB vector similarity search
+│   │   ├── omdb_tool.py          # REST API client (movie enrichment demo)
+│   │   └── web_tool.py           # Web search integration
+│   ├── prompts/
+│   │   ├── planner_prompts.py
+│   │   ├── evaluator_prompts.py
+│   │   └── synthesizer_prompts.py
+│   ├── config.py
+│   ├── utils.py                  # Database catalog builder (runtime schema introspection)
+│   └── streamlit_app.py          # Conversational UI
+│
+└── scripts/
+    ├── create_sql_db.py          # Build SQLite databases from CSV files
+    ├── create_vector_db.py       # Build ChromaDB embeddings from SQL databases
+    └── test_semantic_search.py   # Diagnostic tool for vector search
 ```
 
 ---
