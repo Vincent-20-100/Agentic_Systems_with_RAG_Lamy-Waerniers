@@ -1,4 +1,4 @@
-# Albert Query — Agentic NL2SQL & RAG Conversational Engine
+# Agentic NL2SQL & RAG Conversational Engine
 
 > A production-ready blueprint for building a context-aware conversational AI layer over any structured database. Demonstrated on a multi-source entertainment dataset (Netflix, Disney+, Amazon Prime), but **engineered for direct adaptation to any closed, proprietary data environment**.
 
