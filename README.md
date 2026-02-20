@@ -200,7 +200,7 @@ Adapting this system to a new domain requires: replacing the SQL databases, re-e
 - OMDB API key (free at [omdbapi.com](http://www.omdbapi.com/apikey.aspx)) — demo-specific
 - Langfuse account (optional, for observability)
 
-### Setup
+### 1. Clone & install
 
 ```bash
 git clone https://github.com/Vincent-20-100/Agentic_Systems_with_RAG_Lamy-Waerniers.git
@@ -210,15 +210,35 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Create `.env`:
+### 2. Configure environment
+
+Create a `.env` file at the project root:
 ```env
 OPENAI_API_KEY="your_openai_api_key"
 OMDB_API_KEY="your_omdb_api_key"
-LANGFUSE_SECRET_KEY="sk-lf-..."
-LANGFUSE_PUBLIC_KEY="pk-lf-..."
+LANGFUSE_SECRET_KEY="sk-lf-..."  # Optional — observability
+LANGFUSE_PUBLIC_KEY="pk-lf-..."  # Optional — observability
 ```
 
-Run:
+### 3. Set up data (one-time)
+
+The app requires two data layers: a SQLite database and a ChromaDB vector store.
+
+**If starting from raw CSVs** (place your `.csv` files in `data/csv_db/`):
+```bash
+python scripts/create_sql_db.py       # CSV → SQLite (data/databases/movie.db)
+python scripts/create_vector_db.py    # SQLite → ChromaDB embeddings (data/vector_database/)
+```
+
+**If the pre-built data files are already present** (`data/databases/` and `data/vector_database/`), skip this step.
+
+To verify the vector store is working correctly:
+```bash
+python scripts/test_semantic_search.py
+```
+
+### 4. Run
+
 ```bash
 streamlit run code/streamlit_app.py
 ```
